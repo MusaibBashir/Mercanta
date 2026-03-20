@@ -139,8 +139,8 @@ export function FranchiseDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8f9fb] font-inter pb-12">
-            <div className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="min-h-screen page-bg font-inter pb-12">
+            <div className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 page-enter">
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between">
@@ -160,7 +160,7 @@ export function FranchiseDashboard() {
                     </div>
                     <div className="flex items-center gap-3">
                         <Link to="/sales">
-                            <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-sm shadow-sm">
+                            <Button className="gap-2 text-sm shadow-md" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}>
                                 <ShoppingCart className="w-4 h-4" /> New Sale
                             </Button>
                         </Link>
@@ -202,15 +202,15 @@ export function FranchiseDashboard() {
                 {settings.showActionStrip && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { to: "/sales", icon: ShoppingCart, label: "Point of Sale", sub: "Ring up customers", color: "bg-emerald-50 text-emerald-600", border: "hover:border-emerald-200" },
-                        { to: "/inventory", icon: Package, label: "Local Inventory", sub: `${analytics.totalItems} items in stock`, color: "bg-blue-50 text-blue-600", border: "hover:border-blue-200" },
-                        { to: "/order-stock", icon: Truck, label: "Order Stock", sub: "Request from admin", color: "bg-indigo-50 text-indigo-600", border: "hover:border-indigo-200" },
-                        { to: "/customers", icon: Users, label: "Customers", sub: "View directory", color: "bg-amber-50 text-amber-600", border: "hover:border-amber-200" },
+                        { to: "/sales",      icon: ShoppingCart, label: "Point of Sale",    sub: "Ring up customers",           color: "bg-emerald-50 text-emerald-600", ring: "hover:ring-2 hover:ring-emerald-200" },
+                        { to: "/inventory",  icon: Package,      label: "Local Inventory",  sub: `${analytics.totalItems} items in stock`, color: "bg-blue-50 text-blue-600",    ring: "hover:ring-2 hover:ring-blue-200" },
+                        { to: "/order-stock",icon: Truck,        label: "Order Stock",      sub: "Request from admin",          color: "bg-indigo-50 text-indigo-600",  ring: "hover:ring-2 hover:ring-indigo-200" },
+                        { to: "/customers",  icon: Users,        label: "Customers",        sub: "View directory",              color: "bg-amber-50 text-amber-600",    ring: "hover:ring-2 hover:ring-amber-200" },
                     ].map((link) => (
                         <Link key={link.to} to={link.to}>
-                            <Card className={`border border-gray-200 shadow-sm bg-white hover:shadow-md transition-all cursor-pointer ${link.border}`}>
+                            <Card className={`border border-gray-200 bg-white card-lift cursor-pointer ${link.ring}`}>
                                 <CardContent className="p-4 flex items-center gap-4">
-                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${link.color}`}>
+                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${link.color}`}>
                                         <link.icon className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -227,15 +227,15 @@ export function FranchiseDashboard() {
                 {/* ── KPI Strip ── */}
                 {settings.showKpis && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-none shadow-md text-white">
+                    <Card className="border-none shadow-lg text-white" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}>
                         <CardContent className="p-5">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Today's Revenue</p>
+                                    <p className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Today's Revenue</p>
                                     <p className="text-3xl font-bold mt-1">₹{analytics.todayRevenue.toFixed(0)}</p>
-                                    <p className="text-sm mt-1.5 font-medium text-emerald-400">{analytics.todaySales.length} sales today</p>
+                                    <p className="text-sm mt-1.5 font-medium text-purple-200">{analytics.todaySales.length} sales today</p>
                                 </div>
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
                                     <TrendingUp className="w-4 h-4 text-white" />
                                 </div>
                             </div>

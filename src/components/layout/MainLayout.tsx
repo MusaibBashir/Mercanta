@@ -12,53 +12,52 @@ export function MainLayout({ viewMode, setViewMode }: MainLayoutProps) {
     const isHomePage = location.pathname === "/";
 
     return (
-        <div className="min-h-screen bg-gray-50 font-inter">
-            <div className="w-full max-w-[1400px] mx-auto p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
+        <div className="min-h-screen page-bg font-inter">
+            {/* Sticky glass header */}
+            <header className="glass-header sticky top-0 z-30">
+                <div className="w-full max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                         <HamburgerMenu />
                         {!isHomePage && (
                             <Link
                                 to="/"
-                                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+                                className="w-9 h-9 bg-gray-100 hover:bg-brand-light border border-gray-200 hover:border-purple-200 rounded-xl flex items-center justify-center transition-all duration-200 group"
                                 aria-label="Back to Dashboard"
                             >
-                                <ArrowLeft className="w-5 h-5 text-gray-700" />
+                                <ArrowLeft className="w-4 h-4 text-gray-500 group-hover:text-purple-600 transition-colors" />
                             </Link>
                         )}
-                        <div className="flex items-center justify-center pl-2">
-                            <img src="/logo-transparent.png" className="h-20 w-auto object-contain" alt="Mercanta Logo" />
-                        </div>
+                        <img src="/logo-transparent.png" className="h-14 w-auto object-contain" alt="Mercanta Logo" />
                     </div>
-                    <div className="flex items-center gap-3">
-                        {/* View Mode Toggle */}
-                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
-                            <button
-                                onClick={() => setViewMode("admin")}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${viewMode === "admin"
-                                    ? "bg-gray-900 text-white shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
-                                    }`}
-                            >
-                                <Shield className="w-4 h-4" />
-                                Admin
-                            </button>
-                            <button
-                                onClick={() => setViewMode("franchise")}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${viewMode === "franchise"
-                                    ? "bg-gray-900 text-white shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
-                                    }`}
-                            >
-                                <Store className="w-4 h-4" />
-                                Franchise
-                            </button>
-                        </div>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center gap-1.5 bg-gray-100 rounded-xl p-1">
+                        <button
+                            onClick={() => setViewMode("admin")}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${viewMode === "admin"
+                                ? "bg-white text-purple-700 shadow-sm border border-purple-100"
+                                : "text-gray-500 hover:text-gray-700"
+                                }`}
+                        >
+                            <Shield className="w-3.5 h-3.5" />
+                            Admin
+                        </button>
+                        <button
+                            onClick={() => setViewMode("franchise")}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${viewMode === "franchise"
+                                ? "bg-white text-purple-700 shadow-sm border border-purple-100"
+                                : "text-gray-500 hover:text-gray-700"
+                                }`}
+                        >
+                            <Store className="w-3.5 h-3.5" />
+                            Franchise
+                        </button>
                     </div>
                 </div>
+            </header>
 
-                {/* Page Content */}
+            {/* Page Content */}
+            <div className="w-full max-w-[1400px] mx-auto px-6 py-8 page-enter">
                 <Outlet context={{ viewMode }} />
             </div>
         </div>

@@ -167,27 +167,27 @@ export function KitchenDisplaySystem() {
   };
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-4xl font-bold mb-8">Kitchen Display System</h1>
+    <div className="p-6 min-h-screen text-white" style={{ background: "linear-gradient(160deg, #0f0f1a 0%, #1a1025 100%)" }}>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Kitchen Display</h1>
+          <p className="text-sm text-gray-400 mt-1">Live order queue</p>
+        </div>
+      </div>
 
       {/* Status Summary */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <Card className="bg-blue-600 p-4">
-          <div className="text-sm font-semibold">New Orders</div>
-          <div className="text-3xl font-bold">{groupedTokens.ordered.length}</div>
-        </Card>
-        <Card className="bg-orange-500 p-4">
-          <div className="text-sm font-semibold">Preparing</div>
-          <div className="text-3xl font-bold">{groupedTokens.preparing.length}</div>
-        </Card>
-        <Card className="bg-yellow-500 p-4">
-          <div className="text-sm font-semibold">Prepared</div>
-          <div className="text-3xl font-bold">{groupedTokens.prepared.length}</div>
-        </Card>
-        <Card className="bg-green-600 p-4">
-          <div className="text-sm font-semibold">Ready</div>
-          <div className="text-3xl font-bold">{groupedTokens.ready.length}</div>
-        </Card>
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        {[
+          { label: "Ordered",   count: groupedTokens.ordered.length,   color: "from-blue-600 to-blue-500" },
+          { label: "Preparing", count: groupedTokens.preparing.length, color: "from-orange-600 to-orange-500" },
+          { label: "Prepared",  count: groupedTokens.prepared.length,  color: "from-yellow-600 to-yellow-500" },
+          { label: "Ready",     count: groupedTokens.ready.length,     color: "from-emerald-600 to-emerald-500" },
+        ].map(s => (
+          <div key={s.label} className={`rounded-2xl p-4 bg-gradient-to-br ${s.color} shadow-lg`}>
+            <div className="text-xs font-semibold text-white/70 uppercase tracking-wider">{s.label}</div>
+            <div className="text-4xl font-bold mt-1">{s.count}</div>
+          </div>
+        ))}
       </div>
 
       {/* Token Grid */}
