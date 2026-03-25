@@ -30,6 +30,7 @@ import { StockOrdersPage } from "./pages/admin/StockOrdersPage";
 import { FranchiseDashboard } from "./pages/franchise/FranchiseDashboard";
 import { OrderStockPage } from "./pages/franchise/OrderStockPage";
 import {
+  LandingPage,
   SalesPage,
   AddItemsPage,
   InventoryPage,
@@ -49,7 +50,7 @@ function RoleRedirect() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/" replace />;
 
   // If profile failed to load or doesn't exist
   if (!profile) {
@@ -88,7 +89,7 @@ function RoleRedirect() {
           isOpen={true}
           onComplete={() => {
             // Reload to show the new dashboard with business account context
-            window.location.href = "/#/";
+            window.location.href = "/#/app";
           }}
         />
       </>
@@ -105,9 +106,12 @@ export default function App() {
       <InventoryProvider>
         <HashRouter>
           <Routes>
+            {/* Public landing */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<RoleRedirect />} />
+            <Route path="/app" element={<RoleRedirect />} />
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
@@ -141,7 +145,7 @@ export default function App() {
             <Route path="/analytics" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />
 
             {/* Catch-all: redirect unknown routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
           <Toaster />
         </HashRouter>

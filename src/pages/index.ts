@@ -1,3 +1,4 @@
+export { LandingPage } from "./LandingPage";
 export { SalesPage } from "./SalesPage";
 export { AddItemsPage } from "./AddItemsPage";
 export { InventoryPage } from "./InventoryPage";
