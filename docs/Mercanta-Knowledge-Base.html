@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mercanta — Developer Knowledge Base</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161b27;--bg3:#1e2536;--bg4:#252d3d;
+  --border:#2a3348;--border2:#344060;
+  --text:#cdd9f0;--text2:#8899bb;--text3:#5a6a88;
+  --gold:#c8a84b;--gold2:#9a7023;--gold3:#e6c96a;
+  --navy:#3b5bdb;--navy2:#2d4abf;--navy3:#6585f0;
+  --green:#2ea043;--green2:#3fb950;
+  --red:#f85149;--red2:#ff7b72;
+  --purple:#bc8cff;--teal:#79c0ff;--orange:#ffa657;
+  --mono:'Consolas','JetBrains Mono','Cascadia Code',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --radius:6px;--radius2:10px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;overflow:hidden;height:100vh}
+
+/* ── Layout ── */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:260px;min-width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+#topbar{height:48px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+#content{flex:1;overflow-y:auto;padding:32px 40px;max-width:1100px}
+
+/* ── Sidebar ── */
+.sidebar-header{padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-logo{font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.sidebar-subtitle{font-size:11px;color:var(--text3);margin-top:2px}
+.sidebar-search{padding:10px 12px;flex-shrink:0}
+.sidebar-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:12px;font-family:var(--sans);outline:none}
+.sidebar-search input::placeholder{color:var(--text3)}
+.sidebar-search input:focus{border-color:var(--border2)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:4px 8px 16px}
+.nav-section{margin-bottom:4px}
+.nav-section-header{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.nav-section-header:hover{color:var(--text2)}
+.nav-arrow{transition:transform .15s;font-size:9px}
+.nav-arrow.open{transform:rotate(90deg)}
+.nav-items{overflow:hidden}
+.nav-item{padding:5px 8px 5px 14px;border-radius:var(--radius);cursor:pointer;font-size:12.5px;color:var(--text2);display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg4);color:var(--gold);font-weight:600}
+.nav-item .nav-badge{margin-left:auto;font-size:10px;background:var(--bg4);color:var(--text3);border-radius:10px;padding:1px 6px;flex-shrink:0}
+.nav-item .nav-icon{font-size:11px;flex-shrink:0;width:14px;text-align:center}
+
+/* ── Topbar ── */
+.topbar-title{font-size:14px;color:var(--text);font-weight:500}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3)}
+.topbar-breadcrumb span{color:var(--text2)}
+.topbar-breadcrumb .sep{color:var(--text3)}
+.search-trigger{margin-left:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;color:var(--text3);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:var(--sans)}
+.search-trigger:hover{border-color:var(--border2);color:var(--text2)}
+.search-trigger kbd{background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:10px;font-family:var(--mono)}
+
+/* ── Content ── */
+.page-header{margin-bottom:28px}
+.page-title{font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.page-title .page-icon{font-size:20px}
+.page-desc{color:var(--text2);font-size:14px;line-height:1.6;max-width:720px}
+
+h2{font-size:16px;font-weight:700;color:var(--text);margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+h2::before{content:'';display:block;width:3px;height:16px;background:var(--gold);border-radius:2px;flex-shrink:0}
+h3{font-size:13px;font-weight:700;color:var(--text2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.6px}
+
+/* ── Cards & Tables ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:16px}
+.data-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg3)}
+.data-table .mono{font-family:var(--mono);font-size:12px;color:var(--teal)}
+
+/* ── Tags / Badges ── */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.tag:hover{opacity:.8}
+.tag-component{background:#1e3a5f;color:#79c0ff;border:1px solid #2d5a8e}
+.tag-table{background:#1a3320;color:#56d364;border:1px solid #2d5a45}
+.tag-context{background:#2d1a4a;color:#bc8cff;border:1px solid #4a2d7a}
+.tag-service{background:#3a2200;color:#ffa657;border:1px solid #5a3a00}
+.tag-route{background:#1a2a3a;color:#79c0ff;border:1px solid #2a4a6a}
+.tag-admin{background:#3a0a0a;color:#ff7b72;border:1px solid #5a1a1a}
+.tag-franchise{background:#0a2a1a;color:#3fb950;border:1px solid #1a4a2a}
+.tag-public{background:#2a2a0a;color:#e3b341;border:1px solid #4a4a1a}
+.tag-optional{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+
+/* ── State variable entries ── */
+.state-item{padding:8px 12px;border-left:2px solid var(--border2);margin-bottom:6px;background:var(--bg3);border-radius:0 var(--radius) var(--radius) 0}
+.state-name{font-family:var(--mono);font-size:12.5px;color:var(--gold3)}
+.state-type{font-family:var(--mono);font-size:11.5px;color:var(--purple)}
+.state-default{font-size:11px;color:var(--text3)}
+.state-desc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ── Function entries ── */
+.fn-item{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg2)}
+.fn-item:hover{border-color:var(--border2)}
+.fn-sig{font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.5}
+.fn-name{color:var(--navy3)}
+.fn-param{color:var(--orange)}
+.fn-type{color:var(--purple)}
+.fn-return{color:var(--green2)}
+.fn-desc{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.5}
+.fn-tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+
+/* ── DB Schema ── */
+.table-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:16px;overflow:hidden}
+.table-card-header{padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.table-card-header:hover{background:var(--bg4)}
+.table-name{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--gold)}
+.table-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.table-rls{background:#1a2a1a;color:#3fb950;border:1px solid #2a4a2a;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.col-row{display:grid;grid-template-columns:180px 130px 1fr;gap:8px;padding:6px 16px;border-bottom:1px solid var(--border);align-items:start;font-size:12px}
+.col-row:last-child{border-bottom:none}
+.col-row:hover{background:var(--bg3)}
+.col-name{font-family:var(--mono);color:var(--teal)}
+.col-name.pk{color:var(--gold)}
+.col-name.fk{color:var(--purple)}
+.col-type{font-family:var(--mono);color:var(--orange);font-size:11px}
+.col-notes{color:var(--text2);font-size:11.5px}
+.col-pk-badge{display:inline-block;background:#2d2000;border:1px solid #5a4000;color:#c8a84b;border-radius:3px;padding:0 4px;font-size:9px;font-weight:700;margin-right:4px}
+.col-fk-badge{display:inline-block;background:#1a1a3a;border:1px solid #3a3a7a;color:#bc8cff;border-radius:3px;padding:0 4px;font-size:9px;font-weight:700;margin-right:4px}
+.col-null-badge{display:inline-block;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:3px;padding:0 4px;font-size:9px;margin-right:4px}
+
+/* ── Route table ── */
+.route-row{display:grid;grid-template-columns:220px 160px 80px 1fr;gap:12px;padding:8px 12px;border-bottom:1px solid var(--border);align-items:center;font-size:12.5px}
+.route-row:hover{background:var(--bg3)}
+.route-path{font-family:var(--mono);color:var(--teal)}
+.route-component{color:var(--navy3);cursor:pointer;font-weight:600}
+.route-component:hover{color:var(--gold);text-decoration:underline}
+
+/* ── Search Modal ── */
+#search-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:flex-start;justify-content:center;padding-top:80px}
+#search-modal.open{display:flex}
+.search-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:600px;max-height:500px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.search-input-wrap{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.search-input-wrap svg{color:var(--text3);flex-shrink:0}
+#search-input{flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text);font-family:var(--sans)}
+#search-input::placeholder{color:var(--text3)}
+#search-results{overflow-y:auto;max-height:380px}
+.search-result{padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.search-result:hover,.search-result.focused{background:var(--bg3)}
+.search-result-name{font-size:13px;font-weight:600;color:var(--text)}
+.search-result-path{font-size:11px;color:var(--text3);margin-top:1px}
+.search-result-type{font-size:10px;padding:2px 7px;border-radius:10px;flex-shrink:0}
+.search-empty{padding:24px;text-align:center;color:var(--text3);font-size:13px}
+
+/* ── Misc ── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px}
+.info-card-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.info-card-value{font-size:16px;font-weight:700;color:var(--text)}
+.info-card-sub{font-size:11px;color:var(--text2);margin-top:2px}
+code{font-family:var(--mono);font-size:12px;background:var(--bg3);padding:1px 5px;border-radius:3px;color:var(--orange)}
+.inline-link{color:var(--navy3);cursor:pointer;font-weight:600}
+.inline-link:hover{color:var(--gold);text-decoration:underline}
+.section-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.section-tab{padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.section-tab:hover{color:var(--text2)}
+.section-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.flow-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-family:var(--mono);font-size:12px;color:var(--text2);line-height:1.8;white-space:pre;overflow-x:auto;margin-bottom:12px}
+.flow-step{color:var(--text)}
+.flow-arrow{color:var(--gold)}
+.flow-detail{color:var(--text3)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ── Arch diagram ── */
+.arch-layer{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.arch-label{font-size:10px;color:var(--text3);width:80px;text-align:right;flex-shrink:0}
+.arch-box{padding:5px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer}
+.arch-box:hover{filter:brightness(1.2)}
+.arch-arrow{color:var(--border2);font-size:20px;line-height:1;display:block;margin-left:80px;padding-left:8px;margin-bottom:4px}
+.arch-react{background:#1e3a5f;color:#79c0ff;border:1px solid #2d5a8e}
+.arch-context{background:#2d1a4a;color:#bc8cff;border:1px solid #4a2d7a}
+.arch-service{background:#3a2200;color:#ffa657;border:1px solid #5a3a00}
+.arch-db{background:#1a3320;color:#56d364;border:1px solid #2d5a45}
+.arch-ext{background:#2a2a2a;color:#8899bb;border:1px solid #3a3a3a}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">⬡ MERCANTA</div>
+      <div class="sidebar-subtitle">Developer Knowledge Base · v3.0</div>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" placeholder="Filter navigation…" id="nav-filter" autocomplete="off">
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  </aside>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar">
+      <div class="topbar-breadcrumb" id="breadcrumb">
+        <span>Mercanta KB</span>
+      </div>
+      <button class="search-trigger" id="search-btn">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+        Search everything…
+        <kbd>⌘K</kbd>
+      </button>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- Search Modal -->
+<div id="search-modal">
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+      <input type="text" id="search-input" placeholder="Search components, tables, functions, routes…" autocomplete="off">
+    </div>
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════════════
+const DATA = {
+
+routes: [
+  {path:'/',component:'RoleRedirect',role:'public',desc:'Root redirect — sends admin to /admin, franchise to /dashboard'},
+  {path:'/login',component:'LoginPage',role:'public',desc:'Email/password login with animated gradient background'},
+  {path:'/dashboard',component:'FranchiseDashboard',role:'franchise',desc:'Franchise KPI overview — sales, inventory, alerts'},
+  {path:'/sales',component:'SalesPage',role:'franchise',desc:'POS — barcode/manual entry, cart, discounts, payment, receipts'},
+  {path:'/inventory',component:'InventoryPage',role:'any',desc:'Inventory browser — search, filter, barcode printing'},
+  {path:'/sales-history',component:'SalesHistoryPage',role:'any',desc:'Past sales with filtering, date range, export'},
+  {path:'/customers',component:'CustomersPage',role:'any',desc:'Customer list with loyalty points and transaction history'},
+  {path:'/forecast',component:'ForecastPage',role:'any',desc:'AI-powered sales forecast via Flask + Prophet'},
+  {path:'/order-stock',component:'OrderStockPage',role:'franchise',desc:'Request stock from admin warehouse'},
+  {path:'/menu',component:'RestaurantMenuPage',role:'any',desc:'Restaurant menu CRUD — categories, items, availability'},
+  {path:'/kitchen',component:'KitchenDisplaySystem',role:'any',desc:'KDS — live order tokens, status workflow'},
+  {path:'/tokens',component:'TokenTracker',role:'any',desc:'Token status tracker for restaurant orders'},
+  {path:'/settings/restaurant',component:'RestaurantSettings',role:'any',desc:'Restaurant business account configuration'},
+  {path:'/admin',component:'AdminDashboard',role:'admin',desc:'Admin overview — all franchises, aggregate metrics'},
+  {path:'/admin/franchises',component:'ManageFranchisesPage',role:'admin',desc:'Create, edit, deactivate franchise accounts'},
+  {path:'/admin/franchise/:id',component:'FranchiseDetailPage',role:'admin',desc:'Drill into one franchise — sales, inventory, orders'},
+  {path:'/admin/reports',component:'FinancialReportsPage',role:'admin',desc:'Financial reports across all franchises'},
+  {path:'/admin/inventory',component:'AdminInventoryPage',role:'admin',desc:'Warehouse inventory management'},
+  {path:'/admin/stock-orders',component:'StockOrdersPage',role:'admin',desc:'Approve/reject stock requests from franchises'},
+  {path:'/add-items',component:'AddItemsPage',role:'admin',desc:'Add items to admin warehouse (franchise_id = null)'},
+  {path:'/analytics',component:'Dashboard',role:'admin',desc:'Legacy admin analytics view'},
+],
+
+pages: {
+  LoginPage:{
+    file:'src/pages/LoginPage.tsx',
+    desc:'Login screen with Three.js liquid gradient background and custom animated cursor.',
+    contexts:[],
+    state:[
+      {name:'email',type:'string',init:"''",desc:'Controlled input for email field'},
+      {name:'password',type:'string',init:"''",desc:'Controlled input for password field'},
+      {name:'showPassword',type:'boolean',init:'false',desc:'Toggle password visibility'},
+      {name:'isSigningIn',type:'boolean',init:'false',desc:'Disables form during async login call'},
+      {name:'cursorPos',type:'{x:number,y:number}',init:'{x:0,y:0}',desc:'Custom cursor position tracking'},
+      {name:'isHovering',type:'boolean',init:'false',desc:'Controls custom cursor glow on hover'},
+    ],
+    effects:[
+      {trigger:'mount',desc:'Attaches mousemove listener to track cursor position for custom cursor effect'},
+      {trigger:'mount',desc:'Hides native cursor when over interactive elements'},
+    ],
+    functions:[
+      {name:'handleLogin',params:'e: React.FormEvent',returns:'Promise<void>',desc:'Calls signIn(email, password). On error sets error state. On success AuthContext redirects.'},
+    ],
+    tables:[],
+    components:['LiquidGradient','Ticker'],
+    notes:'signIn comes from supabase.auth.signInWithPassword() wrapped in AuthContext.',
+  },
+  SalesPage:{
+    file:'src/pages/SalesPage.tsx',
+    desc:'Full-featured POS terminal. Supports barcode scanning, fuzzy search, item-level discounts, split payments, loyalty points, restaurant orders with KDS tokens.',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'entryMode',type:"'barcode'|'manual'",init:"'barcode'",desc:'How the user is adding items'},
+      {name:'items',type:'SaleItem[]',init:'[]',desc:'Current cart contents'},
+      {name:'selectedSku',type:'string',init:"''",desc:'Currently selected item SKU from dropdown'},
+      {name:'searchQuery',type:'string',init:"''",desc:'Fuzzy search query for item lookup'},
+      {name:'isDropdownOpen',type:'boolean',init:'false',desc:'Controls item search dropdown visibility'},
+      {name:'quantity',type:'number',init:'1',desc:'Quantity for currently-being-added item'},
+      {name:'price',type:'number',init:'0',desc:'Price override for current item'},
+      {name:'barcode',type:'string',init:"''",desc:'Barcode input value'},
+      {name:'customerName',type:'string',init:"''",desc:'Customer name for this sale'},
+      {name:'customerPhone',type:'string',init:"''",desc:'Customer phone — used to look up loyalty points'},
+      {name:'customerEmail',type:'string',init:"''",desc:'Optional customer email'},
+      {name:'isLookingUpCustomer',type:'boolean',init:'false',desc:'Loading state during phone lookup'},
+      {name:'customerPointsBalance',type:'number',init:'0',desc:'Points available to redeem'},
+      {name:'pointsToUse',type:'number',init:'0',desc:'Points the customer is applying to this sale'},
+      {name:'isRestaurantOrder',type:'boolean',init:'false',desc:'True when business is a restaurant — enables KDS token'},
+      {name:'specialInstructions',type:'string',init:"''",desc:'Kitchen notes for restaurant orders'},
+      {name:'paymentMethod',type:"'cash'|'upi'|'card'|'split'",init:"'cash'",desc:'Payment method for this sale'},
+      {name:'paymentDetails',type:'Record<string,number>',init:'{}',desc:'Split payment breakdown e.g. {cash:200,upi:150}'},
+      {name:'cartDiscountType',type:"'percent'|'flat'",init:"'percent'",desc:'Type of cart-level discount'},
+      {name:'cartDiscountValue',type:'number',init:'0',desc:'Amount of cart-level discount'},
+      {name:'taxRate',type:'number',init:'0',desc:'Tax percentage applied to sale total'},
+      {name:'hasHeldSale',type:'boolean',init:'false',desc:'Whether there is a paused/held sale in sessionStorage'},
+      {name:'isScanning',type:'boolean',init:'false',desc:'Camera scanner open/closed'},
+      {name:'menuItems',type:'MenuItem[]',init:'[]',desc:'Restaurant menu items (only loaded when isRestaurantOrder)'},
+      {name:'loadingMenu',type:'boolean',init:'false',desc:'Loading state for menu fetch'},
+    ],
+    effects:[
+      {trigger:'mount',desc:'Checks sessionStorage for a held sale and restores it if found'},
+      {trigger:'mount',desc:'Registers global keyboard shortcuts: F2 to focus search, Escape to close modals'},
+      {trigger:'[isRestaurantOrder]',desc:'When restaurant mode activates, fetches menu via menuService.getRestaurantMenu()'},
+      {trigger:'[customerPhone]',desc:'Debounced: looks up customer by phone number after 500ms of no typing'},
+    ],
+    functions:[
+      {name:'addItemToCart',params:'item: SaleItem',returns:'void',desc:'Adds item to cart or increments quantity if SKU already in cart'},
+      {name:'removeFromCart',params:'sku: string',returns:'void',desc:'Removes item from cart by SKU'},
+      {name:'updateQuantity',params:'sku: string, qty: number',returns:'void',desc:'Updates quantity for a specific cart item'},
+      {name:'handleBarcodeSubmit',params:'barcode: string',returns:'void',desc:'Looks up inventory by barcode, adds to cart if found'},
+      {name:'handleCheckout',params:'void',returns:'Promise<void>',desc:'Calls recordSale(), opens receipt, creates KDS token if restaurant'},
+      {name:'holdSale',params:'void',returns:'void',desc:'Saves current cart to sessionStorage, clears state'},
+      {name:'resumeHeldSale',params:'void',returns:'void',desc:'Restores cart from sessionStorage'},
+      {name:'calculateTotals',params:'void',returns:'{subtotal,discountTotal,taxAmount,grandTotal}',desc:'Computes sale totals from cart + discount + tax settings'},
+      {name:'fuzzySearch',params:'query: string',returns:'InventoryItem[]',desc:'Levenshtein distance search across itemName, SKU, category'},
+    ],
+    tables:['inventory','sales','sale_items','customers','order_tokens','restaurant_menu'],
+    components:['CameraScanner','PaymentModal','ReceiptPreview'],
+    notes:'recordSale() lives in InventoryContext — SalesPage just calls it with assembled params.',
+  },
+  InventoryPage:{
+    file:'src/pages/InventoryPage.tsx',
+    desc:'Read-only inventory browser for franchise users. Admins see all stock including warehouse rows.',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'searchQuery',type:'string',init:"''",desc:'Text filter across itemName, SKU, barcode, category'},
+      {name:'filterCategory',type:'string',init:"''",desc:'Selected category filter'},
+      {name:'isScanning',type:'boolean',init:'false',desc:'Camera scanner open/closed'},
+    ],
+    effects:[],
+    functions:[
+      {name:'printBarcode',params:'item: InventoryItem',returns:'void',desc:'Opens print window with styled barcode label'},
+    ],
+    memos:[
+      {name:'myInventory',desc:'Franchise-filtered: own rows + warehouse rows. Admin: all rows.'},
+      {name:'totalValue',desc:'Sum of price × quantity across myInventory'},
+      {name:'totalCount',desc:'Sum of all item quantities'},
+      {name:'lowStockItems',desc:'Items where quantity < 20 (threshold configurable)'},
+      {name:'uniqueCategories',desc:'Distinct category values from myInventory'},
+      {name:'filteredInventory',desc:'myInventory filtered by searchQuery and filterCategory'},
+    ],
+    tables:['inventory'],
+    components:['CameraScanner'],
+    notes:'No writes — inventory edits go through AddItemsPage (admin) or InventoryContext.',
+  },
+  SalesHistoryPage:{
+    file:'src/pages/SalesHistoryPage.tsx',
+    desc:'Browse, filter and export past sales. Shows customer info, payment method, items sold.',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'searchQuery',type:'string',init:"''",desc:'Filter by customer name or sale ID'},
+      {name:'dateFrom',type:'string',init:"''",desc:'Start of date range filter'},
+      {name:'dateTo',type:'string',init:"''",desc:'End of date range filter'},
+      {name:'paymentFilter',type:'string',init:"''",desc:'Filter by payment method'},
+      {name:'expandedSale',type:'string|null',init:'null',desc:'ID of expanded sale row showing items detail'},
+    ],
+    tables:['sales','sale_items'],
+    components:[],
+  },
+  CustomersPage:{
+    file:'src/pages/CustomersPage.tsx',
+    desc:'Customer directory with loyalty points, transaction history per customer.',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'searchQuery',type:'string',init:"''",desc:'Filter by name, phone, email'},
+      {name:'selectedCustomer',type:'Customer|null',init:'null',desc:'Customer whose history is shown in side panel'},
+    ],
+    tables:['customers','sales'],
+    components:[],
+  },
+  ForecastPage:{
+    file:'src/pages/ForecastPage.tsx',
+    desc:'Demand forecasting — calls Flask/Prophet backend for ML predictions. Falls back to linear trend if backend unavailable.',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'forecasts',type:'ForecastData[]',init:'[]',desc:'Array of per-SKU forecast results from backend'},
+      {name:'isLoading',type:'boolean',init:'false',desc:'Waiting for forecast response'},
+      {name:'error',type:'string|null',init:'null',desc:'Error message if backend unavailable'},
+      {name:'selectedItem',type:'string',init:"''",desc:'SKU to show detailed forecast chart'},
+      {name:'horizon',type:'number',init:'30',desc:'Forecast horizon in days'},
+    ],
+    tables:['sales','sale_items'],
+    components:[],
+    notes:'VITE_FORECAST_API_URL env var points to Flask server. Falls back to linear regression when unavailable.',
+  },
+  AddItemsPage:{
+    file:'src/pages/AddItemsPage.tsx',
+    desc:'Admin-only. Add new products to warehouse inventory (franchise_id = null).',
+    contexts:['AuthContext','InventoryContext'],
+    state:[
+      {name:'sku',type:'string',init:"''",desc:'Unique product code'},
+      {name:'barcode',type:'string',init:"''",desc:'Barcode number (optional)'},
+      {name:'itemName',type:'string',init:"''",desc:'Product display name'},
+      {name:'category',type:'string',init:"''",desc:'Product category'},
+      {name:'price',type:'number',init:'0',desc:'Unit price'},
+      {name:'quantity',type:'number',init:'0',desc:'Initial stock quantity'},
+      {name:'description',type:'string',init:"''",desc:'Optional description'},
+    ],
+    tables:['inventory'],
+    functions:[
+      {name:'handleSubmit',params:'e: FormEvent',returns:'Promise<void>',desc:'Calls addInventoryItem() with franchise_id=null (warehouse)'},
+    ],
+  },
+  RestaurantMenuPage:{
+    file:'src/pages/RestaurantMenuPage.tsx',
+    desc:'Full CRUD for restaurant menu items. Groups by category, toggle availability inline.',
+    contexts:['AuthContext'],
+    state:[
+      {name:'menuItems',type:'MenuItem[]',init:'[]',desc:'All menu items for current business'},
+      {name:'isLoading',type:'boolean',init:'false',desc:'Fetch in progress'},
+      {name:'editingItem',type:'MenuItem|null',init:'null',desc:'Item currently being edited in modal'},
+      {name:'isModalOpen',type:'boolean',init:'false',desc:'Edit/add modal open state'},
+      {name:'categories',type:'MenuCategory[]',init:'[]',desc:'Distinct categories for grouping'},
+    ],
+    tables:['restaurant_menu'],
+    components:[],
+  },
+  KitchenDisplaySystem:{
+    file:'src/components/KitchenDisplaySystem.tsx',
+    desc:'Live kitchen board. Shows active order tokens grouped by status. Realtime via Supabase subscription.',
+    contexts:['AuthContext'],
+    state:[
+      {name:'tokens',type:'OrderToken[]',init:'[]',desc:'Active tokens from get_active_tokens RPC'},
+      {name:'isLoading',type:'boolean',init:'false',desc:'Initial load state'},
+      {name:'filter',type:'string',init:"'all'",desc:'Status filter: all / ordered / preparing / ready'},
+    ],
+    effects:[
+      {trigger:'[activeBusinessAccount]',desc:'Fetches active tokens and subscribes to order_tokens realtime changes'},
+    ],
+    tables:['order_tokens','token_status_history'],
+    functions:[
+      {name:'handleStatusUpdate',params:'tokenId: string, newStatus: string',returns:'Promise<void>',desc:'Calls tokenService.updateTokenStatus() then refreshes list'},
+    ],
+  },
+  AdminDashboard:{
+    file:'src/pages/admin/AdminDashboard.tsx',
+    desc:'Admin home — aggregate metrics across all franchises, recent activity, low-stock alerts.',
+    contexts:['AuthContext','InventoryContext'],
+    tables:['franchises','sales','inventory','stock_orders'],
+    state:[
+      {name:'stats',type:'DashboardStats',init:'{}',desc:'Aggregate totals: total sales, franchises, revenue'},
+      {name:'recentActivity',type:'ActivityItem[]',init:'[]',desc:'Recent sales/orders across all franchises'},
+    ],
+  },
+  ManageFranchisesPage:{
+    file:'src/pages/admin/ManageFranchisesPage.tsx',
+    desc:'Admin CRUD for franchise accounts. Create new franchise users, toggle active status.',
+    contexts:['AuthContext'],
+    tables:['franchises','profiles'],
+    state:[
+      {name:'franchises',type:'Franchise[]',init:'[]',desc:'All franchises from getAllFranchises()'},
+      {name:'isCreating',type:'boolean',init:'false',desc:'Create modal open'},
+    ],
+  },
+  StockOrdersPage:{
+    file:'src/pages/admin/StockOrdersPage.tsx',
+    desc:'Admin reviews pending stock requests. Approve transfers inventory from warehouse to franchise.',
+    contexts:['AuthContext','InventoryContext'],
+    tables:['stock_orders','stock_order_items','inventory'],
+    state:[
+      {name:'orders',type:'StockOrder[]',init:'[]',desc:'From stockOrders in InventoryContext'},
+      {name:'filter',type:'string',init:"'pending'",desc:'Status filter'},
+    ],
+  },
+  OrderStockPage:{
+    file:'src/pages/OrderStockPage.tsx',
+    desc:'Franchise requests stock from warehouse. Selects items and quantities to request.',
+    contexts:['AuthContext','InventoryContext'],
+    tables:['stock_orders','stock_order_items'],
+    state:[
+      {name:'requestItems',type:'StockOrderItem[]',init:'[]',desc:'Items in the current stock request'},
+      {name:'notes',type:'string',init:"''",desc:'Optional notes for admin'},
+    ],
+  },
+  FranchiseDashboard:{
+    file:'src/pages/FranchiseDashboard.tsx',
+    desc:'Franchise home — today\'s sales, inventory value, low stock, recent transactions.',
+    contexts:['AuthContext','InventoryContext'],
+    tables:['sales','inventory'],
+  },
+},
+
+components: {
+  ProtectedRoute:{
+    file:'src/components/ProtectedRoute.tsx',
+    desc:'Route guard wrapper. Handles loading spinner, unauthenticated redirect, and role enforcement.',
+    props:[
+      {name:'children',type:'ReactNode',required:true,desc:'Page component to render if authorized'},
+      {name:'requiredRole',type:"'admin'|'franchise'",required:false,desc:'If set, redirects users without this role to their own dashboard'},
+    ],
+    logic:'isLoading → spinner | !user → /login | !profile → /login | role mismatch → /admin or /dashboard | else → children',
+    contexts:['AuthContext'],
+  },
+  HamburgerMenu:{
+    file:'src/components/HamburgerMenu.tsx',
+    desc:'Side navigation drawer with links, AccountSwitcher, and sign-out. Visible on all protected pages.',
+    contexts:['AuthContext'],
+  },
+  AccountSwitcher:{
+    file:'src/components/AccountSwitcher.tsx',
+    desc:'Dropdown to switch active business account. Calls switchBusinessAccount() from AuthContext.',
+    contexts:['AuthContext'],
+    props:[{name:'accounts',type:'BusinessAccount[]',required:true,desc:'List of accounts available to current user'}],
+  },
+  CameraScanner:{
+    file:'src/components/CameraScanner.tsx',
+    desc:'Camera-based barcode/SKU scanner using device camera stream.',
+    props:[
+      {name:'onScan',type:'(value: string) => void',required:true,desc:'Called with scanned value'},
+      {name:'onClose',type:'() => void',required:true,desc:'Called when scanner dismissed'},
+    ],
+  },
+  BusinessSetupModal:{
+    file:'src/components/BusinessSetupModal.tsx',
+    desc:'Shown to new users without a business account. Guides through initial setup.',
+    contexts:['AuthContext'],
+    tables:['business_accounts'],
+  },
+  InvoiceModal:{
+    file:'src/components/InvoiceModal.tsx',
+    desc:'Printable invoice/receipt for a completed sale.',
+    props:[
+      {name:'sale',type:'SaleRecord',required:true,desc:'Sale data to display'},
+      {name:'onClose',type:'() => void',required:true,desc:'Dismiss callback'},
+    ],
+  },
+  MainLayout:{
+    file:'src/components/layout/MainLayout.tsx',
+    desc:'Root layout wrapper: header, navigation drawer, page content area.',
+    contexts:['AuthContext'],
+  },
+  PageContainer:{
+    file:'src/components/layout/PageContainer.tsx',
+    desc:'Standard page layout with title, icon, subtitle strip.',
+    props:[
+      {name:'title',type:'string',required:true,desc:'Page heading'},
+      {name:'icon',type:'ReactNode',required:false,desc:'Icon before title'},
+      {name:'subtitle',type:'string',required:false,desc:'Secondary description text'},
+      {name:'actions',type:'ReactNode',required:false,desc:'Right-side action buttons'},
+      {name:'children',type:'ReactNode',required:true,desc:'Page body content'},
+    ],
+  },
+  TokenTracker:{
+    file:'src/components/TokenTracker.tsx',
+    desc:'Shows order token status timeline. Used from /tokens route.',
+    contexts:['AuthContext'],
+    tables:['order_tokens','token_status_history'],
+  },
+  RestaurantSettings:{
+    file:'src/components/RestaurantSettings.tsx',
+    desc:'Configure restaurant account: name, type, logo, feature flags.',
+    contexts:['AuthContext'],
+    tables:['business_accounts'],
+  },
+},
+
+contexts: {
+  AuthContext:{
+    file:'src/context/AuthContext.tsx',
+    desc:'Global authentication and multi-tenancy state. Wraps the entire app. Handles Supabase auth events, profile loading, and business account switching.',
+    state:[
+      {name:'user',type:'any|null',init:'null',desc:'Raw Supabase auth user object. Contains id, email, metadata.'},
+      {name:'profile',type:'UserProfile|null',init:'null',desc:'Row from profiles table. Has role (admin/franchise) and full_name.'},
+      {name:'franchise',type:'Franchise|null',init:'null',desc:'Associated franchise row for franchise users. null for admins.'},
+      {name:'activeBusinessAccount',type:'BusinessAccount|null',init:'null',desc:'The business account currently in context. All data queries scope to this.'},
+      {name:'businessAccounts',type:'BusinessAccount[]',init:'[]',desc:'All business accounts this user can access (owned + permissioned).'},
+      {name:'isLoading',type:'boolean',init:'true',desc:'True until initial auth check completes. Prevents flash of login page.'},
+      {name:'authError',type:'string|null',init:'null',desc:'Last auth error message for display.'},
+    ],
+    functions:[
+      {name:'signIn',params:'email: string, password: string',returns:'Promise<{error: string|null}>',desc:'Calls supabase.auth.signInWithPassword(). Returns error string or null on success.'},
+      {name:'signOut',params:'',returns:'Promise<void>',desc:'Calls supabase.auth.signOut(), clears all state, redirects to /login.'},
+      {name:'createFranchiseUser',params:'email, password, fullName, franchiseName, region, state',returns:'Promise<{error, franchise?}>',desc:'Admin action: creates Supabase auth user + profiles row + franchises row in one flow.'},
+      {name:'getAllFranchises',params:'',returns:'Promise<Franchise[]>',desc:'Fetches all rows from franchises table. Admin only.'},
+      {name:'updateFranchise',params:'id: string, updates: Partial<Franchise>',returns:'Promise<boolean>',desc:'Updates a franchise row. Partial means you only pass changed fields.'},
+      {name:'switchBusinessAccount',params:'accountId: string',returns:'Promise<{error: string|null}>',desc:'Updates active_account_sessions table and sets activeBusinessAccount in state. Triggers InventoryContext reload.'},
+      {name:'getBusinessAccounts',params:'',returns:'Promise<BusinessAccount[]>',desc:'Fetches accounts via get_user_business_accounts RPC, which joins permissions.'},
+      {name:'createBusinessAccount',params:'businessName: string, businessType: string',returns:'Promise<{error, account?}>',desc:'Creates a new business_accounts row owned by current user.'},
+    ],
+    interfaces:[
+      {name:'UserProfile',fields:'id, role (admin|franchise), full_name, created_at, default_business_account_id?'},
+      {name:'Franchise',fields:'id, name, region, state, owner_id, created_by, is_active, business_account_id?, created_at'},
+      {name:'BusinessAccount',fields:'id, owner_id, business_name, business_type (standalone_shop|franchise_admin|franchise_unit), display_name?, logo_url?, settings?, is_active, created_at, updated_at'},
+      {name:'AccountContext',fields:'id, business_name, business_type, role_in_account (owner|manager|operator|viewer), available_features[]'},
+      {name:'Permission',fields:'id, profile_id, business_account_id, role, scope, can_read, can_write, can_delete'},
+    ],
+    initialization:`1. supabase.auth.getSession() — checks localStorage for existing JWT
+2. If session found: setUser(), fetchProfile(userId)
+3. fetchProfile() → SELECT * FROM profiles WHERE id = userId
+4. If franchise role: fetchFranchise(userId)
+5. fetchBusinessAccounts(userId) via RPC get_user_business_accounts
+6. getActiveBusinessAccountFromSession() → checks active_account_sessions
+7. supabase.auth.onAuthStateChange() — subscribes to SIGNED_IN / SIGNED_OUT events
+8. On SIGNED_OUT: clears all state variables`,
+  },
+  InventoryContext:{
+    file:'src/context/InventoryContext.tsx',
+    desc:'All transactional data — inventory items, sales history, customers, stock orders. Reloads when activeBusinessAccount changes.',
+    state:[
+      {name:'inventory',type:'InventoryItem[]',init:'[]',desc:'All inventory visible to current user. Franchise sees own + warehouse. Admin sees all.'},
+      {name:'salesHistory',type:'SaleRecord[]',init:'[]',desc:'Recent sales for current franchise or all (admin).'},
+      {name:'customers',type:'Customer[]',init:'[]',desc:'Customer list for current franchise.'},
+      {name:'stockOrders',type:'StockOrder[]',init:'[]',desc:'Stock requests. Franchise sees own. Admin sees all pending.'},
+      {name:'isLoading',type:'boolean',init:'true',desc:'True while any initial data fetch is in flight.'},
+      {name:'error',type:'string|null',init:'null',desc:'Last data fetch error.'},
+    ],
+    functions:[
+      {name:'addInventoryItem',params:'item: Omit<InventoryItem,"id"|"dateAdded"|"lastUpdated">',returns:'Promise<boolean>',desc:'INSERTs into inventory table. Sets franchise_id from auth context.'},
+      {name:'updateInventoryItem',params:'id: string, updates: Partial<InventoryItem>',returns:'Promise<boolean>',desc:'UPDATEs inventory row by id.'},
+      {name:'updateInventoryQuantity',params:'sku: string, delta: number',returns:'Promise<boolean>',desc:'Increments/decrements quantity. Uses SQL: quantity + delta.'},
+      {name:'deleteInventoryItem',params:'id: string',returns:'Promise<boolean>',desc:'DELETEs inventory row. Admin only effectively (RLS).'},
+      {name:'getInventoryBySku',params:'sku: string',returns:'InventoryItem|undefined',desc:'Synchronous lookup in local state. Prefers franchise-specific row over warehouse row.'},
+      {name:'getCustomerByPhone',params:'phone: string',returns:'Promise<Customer|null>',desc:'SELECTs customer by phone. Returns null if not found.'},
+      {name:'recordSale',params:'items: SaleItem[], customerInfo, payment',returns:'Promise<{success, saleId?, tokenNumber?}>',desc:'Main sale transaction: INSERT sale → INSERT sale_items → UPDATE inventory quantities → upsert customer → award points → createOrderToken if restaurant.'},
+      {name:'addCustomer',params:'customer: Omit<Customer,"id"|"createdAt">',returns:'Promise<Customer|null>',desc:'INSERTs new customer row.'},
+      {name:'getTotalInventoryValue',params:'',returns:'number',desc:'Sync: sum of price × quantity across inventory[].'},
+      {name:'getTotalInventoryCount',params:'',returns:'number',desc:'Sync: sum of all quantities.'},
+      {name:'getLowStockItems',params:'threshold?: number = 20',returns:'InventoryItem[]',desc:'Sync: filters inventory where quantity < threshold.'},
+      {name:'refreshData',params:'',returns:'Promise<void>',desc:'Re-fetches inventory, sales, customers, stockOrders.'},
+      {name:'createStockOrder',params:'order: StockOrderRequest',returns:'Promise<boolean>',desc:'Franchise creates a stock request. INSERTs stock_orders + stock_order_items.'},
+      {name:'approveStockOrder',params:'orderId: string',returns:'Promise<boolean>',desc:'Admin approves: fetches fresh warehouse inventory, transfers rows by updating franchise_id. Splits rows if partial qty.'},
+      {name:'rejectStockOrder',params:'orderId: string',returns:'Promise<boolean>',desc:'Admin rejects: UPDATEs status to rejected.'},
+    ],
+    interfaces:[
+      {name:'InventoryItem',fields:'id, sku, barcode?, itemName, category, price, quantity, description?, dateAdded, lastUpdated, franchiseId?'},
+      {name:'SaleItem',fields:'sku, itemName, quantity, price, discount?, discountType? (percent|flat), discountValue?'},
+      {name:'SaleRecord',fields:'id, items[], customerName, customerPhone?, customerEmail?, total, date, franchiseId?, subtotal?, discountTotal?, taxRate?, taxAmount?, paymentMethod?, paymentDetails?, transactionId?, pointsEarned?, pointsUsed?'},
+      {name:'Customer',fields:'id, name, phone?, email?, pointsBalance, createdAt'},
+      {name:'StockOrder',fields:'id, franchiseId, franchiseName, items[], status (pending|approved|rejected), notes?, createdAt, updatedAt'},
+    ],
+    dataflow:`Loads when: franchise or activeBusinessAccount changes (useEffect dep array)
+Query pattern (franchise users):
+  SELECT * FROM inventory WHERE franchise_id = ? OR franchise_id IS NULL
+Query pattern (admin):
+  SELECT * FROM inventory  (RLS allows all rows)
+Stock order approval:
+  1. Fetch warehouse row (franchise_id = null) for requested SKU
+  2a. If warehouse has exact qty AND franchise lacks this SKU: UPDATE franchise_id = franchiseId
+  2b. Else: decrement warehouse qty + INSERT new franchise row OR increment existing`,
+  },
+},
+
+database: {
+  profiles:{
+    desc:'One row per user. Linked to Supabase auth.users. Stores app-level role.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,fk:'auth.users(id)',notes:'CASCADE DELETE. Supabase creates this on signup.'},
+      {name:'role',type:'TEXT',notes:"'admin' or 'franchise'. DEFAULT 'franchise'. SET manually for admins."},
+      {name:'full_name',type:'TEXT',notes:'NOT NULL. Set during signup or admin creation.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'default_business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Optional. Preferred account on login.'},
+    ],
+    policies:['Users can read their own row','Admins can read all rows','Users can update their own row'],
+    indexes:['idx_profiles_role on (role)'],
+  },
+  franchises:{
+    desc:'Each franchise unit. Linked to the profile of its owner. Admin creates these.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'name',type:'TEXT',notes:'NOT NULL. e.g. "Mumbai South Store"'},
+      {name:'region',type:'TEXT',notes:'NOT NULL. Geographic region.'},
+      {name:'state',type:'TEXT',notes:'NOT NULL. Indian state name.'},
+      {name:'owner_id',type:'UUID',fk:'profiles(id)',notes:'The franchise user who owns this.'},
+      {name:'created_by',type:'UUID',fk:'profiles(id)',notes:'Admin who created it.'},
+      {name:'is_active',type:'BOOLEAN',notes:'DEFAULT TRUE. Deactivated franchises lose access.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Optional link to business account.'},
+    ],
+    indexes:['idx_franchises_owner on (owner_id)'],
+  },
+  inventory:{
+    desc:'All products. franchise_id = NULL means warehouse/admin stock. franchise_id set = that franchise\'s own stock.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'sku',type:'TEXT',notes:'NOT NULL. Unique per (sku, franchise_id) combination.'},
+      {name:'barcode',type:'TEXT',notes:'Optional. For scanner lookup.'},
+      {name:'item_name',type:'TEXT',notes:'NOT NULL. Display name.'},
+      {name:'category',type:'TEXT',notes:'Product category for filtering.'},
+      {name:'price',type:'NUMERIC(12,2)',notes:'Unit selling price.'},
+      {name:'quantity',type:'INTEGER',notes:'Current stock count.'},
+      {name:'description',type:'TEXT',notes:'Optional product description.'},
+      {name:'date_added',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'last_updated',type:'TIMESTAMPTZ',notes:'Updated on every quantity change.'},
+      {name:'franchise_id',type:'UUID',fk:'franchises(id)',notes:'NULL = warehouse. Set = franchise-specific stock.'},
+    ],
+    policies:['Franchise users see own rows + null franchise_id rows','Admins see all rows'],
+    indexes:['idx_inventory_franchise on (franchise_id)','idx_inventory_sku on (sku)'],
+  },
+  sales:{
+    desc:'Every completed sale transaction.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'customer_id',type:'UUID',fk:'customers(id)',notes:'Optional. Set if customer was looked up by phone.'},
+      {name:'customer_name',type:'TEXT',notes:'NOT NULL. Denormalized for speed.'},
+      {name:'total',type:'NUMERIC(12,2)',notes:'Grand total after discount and tax.'},
+      {name:'subtotal',type:'NUMERIC(12,2)',notes:'Pre-discount, pre-tax sum.'},
+      {name:'discount_total',type:'NUMERIC(12,2)',notes:'Total discount applied. DEFAULT 0.'},
+      {name:'tax_rate',type:'NUMERIC(5,2)',notes:'Tax percentage. DEFAULT 0.'},
+      {name:'tax_amount',type:'NUMERIC(12,2)',notes:'Computed tax amount. DEFAULT 0.'},
+      {name:'payment_method',type:'TEXT',notes:"'cash','upi','card','split'. DEFAULT 'cash'."},
+      {name:'payment_details',type:'JSONB',notes:'Split breakdown e.g. {"cash":200,"upi":150}'},
+      {name:'date',type:'TIMESTAMPTZ',notes:'DEFAULT NOW(). Sale timestamp.'},
+      {name:'franchise_id',type:'UUID',fk:'franchises(id)',notes:'Which franchise made this sale.'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Which business account (for restaurants).'},
+      {name:'points_earned',type:'INTEGER',notes:'Loyalty points awarded. floor(total/100).'},
+      {name:'points_used',type:'INTEGER',notes:'Loyalty points redeemed in this sale.'},
+    ],
+    indexes:['idx_sales_franchise on (franchise_id)','idx_sales_date on (date DESC)'],
+  },
+  sale_items:{
+    desc:'Line items for each sale. One row per product in a sale.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'sale_id',type:'UUID',fk:'sales(id)',notes:'NOT NULL. CASCADE DELETE.'},
+      {name:'sku',type:'TEXT',notes:'Product SKU at time of sale.'},
+      {name:'item_name',type:'TEXT',notes:'Denormalized product name.'},
+      {name:'quantity',type:'INTEGER',notes:'Units sold.'},
+      {name:'price',type:'NUMERIC(12,2)',notes:'Unit price at time of sale.'},
+      {name:'discount',type:'NUMERIC(12,2)',notes:'Per-item discount amount. DEFAULT 0.'},
+      {name:'discount_type',type:'TEXT',notes:"'percent' or 'flat'."},
+      {name:'discount_value',type:'NUMERIC(12,2)',notes:'Discount input value before computation.'},
+    ],
+  },
+  customers:{
+    desc:'Customer profiles. Identified by phone number. Accumulate loyalty points.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'name',type:'TEXT',notes:'Customer display name.'},
+      {name:'phone',type:'TEXT',notes:'UNIQUE. Primary lookup key.'},
+      {name:'email',type:'TEXT',notes:'Optional.'},
+      {name:'points_balance',type:'INTEGER',notes:'DEFAULT 0. 1 point per ₹100 spent. 1 point = ₹1 redemption.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+    ],
+    indexes:['idx_customers_phone on (phone)'],
+  },
+  stock_orders:{
+    desc:'Franchise requests for stock from admin warehouse.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'franchise_id',type:'UUID',fk:'franchises(id)',notes:'NOT NULL. Requesting franchise.'},
+      {name:'franchise_name',type:'TEXT',notes:'Denormalized for admin display.'},
+      {name:'status',type:'TEXT',notes:"'pending' | 'approved' | 'rejected'. DEFAULT 'pending'."},
+      {name:'notes',type:'TEXT',notes:'Optional request notes.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'updated_at',type:'TIMESTAMPTZ',notes:'Updated when admin acts.'},
+    ],
+    indexes:['idx_stock_orders_franchise','idx_stock_orders_status'],
+  },
+  stock_order_items:{
+    desc:'Line items within a stock order request.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'order_id',type:'UUID',fk:'stock_orders(id)',notes:'NOT NULL. CASCADE DELETE.'},
+      {name:'sku',type:'TEXT',notes:'Product SKU being requested.'},
+      {name:'item_name',type:'TEXT',notes:'Denormalized product name.'},
+      {name:'quantity',type:'INTEGER',notes:'Requested quantity. CHECK (quantity > 0).'},
+    ],
+  },
+  business_accounts:{
+    desc:'Multi-tenancy core. Each business (shop, franchise, restaurant) is a business_account.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'owner_id',type:'UUID',fk:'profiles(id)',notes:'NOT NULL. User who created this account.'},
+      {name:'business_name',type:'TEXT',notes:'NOT NULL. Display name.'},
+      {name:'business_type',type:'TEXT',notes:"'standalone_shop' | 'franchise_admin' | 'franchise_unit'"},
+      {name:'display_name',type:'TEXT',notes:'Optional short name.'},
+      {name:'logo_url',type:'TEXT',notes:'Optional logo image URL.'},
+      {name:'settings',type:'JSONB',notes:'Optional freeform config (feature flags, preferences).'},
+      {name:'is_active',type:'BOOLEAN',notes:'DEFAULT TRUE.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'updated_at',type:'TIMESTAMPTZ',notes:'Updated on any change.'},
+    ],
+  },
+  active_account_sessions:{
+    desc:'Tracks which business account each user currently has active. Single row per user.',
+    rls:true,
+    cols:[
+      {name:'user_id',type:'UUID',pk:true,fk:'profiles(id)',notes:'Also the primary key — one active session per user.'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Currently selected account.'},
+      {name:'valid_until',type:'TIMESTAMPTZ',notes:'Session expiry.'},
+    ],
+  },
+  permissions:{
+    desc:'Role-based access for business accounts. Enables shared access (manager, operator, viewer).',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'profile_id',type:'UUID',fk:'profiles(id)',notes:'User being granted access.'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Account being accessed.'},
+      {name:'role',type:'TEXT',notes:"'owner' | 'manager' | 'operator' | 'viewer'"},
+      {name:'scope',type:'TEXT',notes:'Optional scope restriction.'},
+      {name:'can_read',type:'BOOLEAN',notes:'Read access.'},
+      {name:'can_write',type:'BOOLEAN',notes:'Write access.'},
+      {name:'can_delete',type:'BOOLEAN',notes:'Delete access.'},
+    ],
+  },
+  order_tokens:{
+    desc:'Restaurant order tokens. Numbered daily per business. Drive the Kitchen Display System.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'sale_id',type:'UUID',fk:'sales(id)',notes:'The sale that created this token.'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Which restaurant.'},
+      {name:'token_number',type:'INTEGER',notes:'Daily sequential number. Reset each day per business. Created by create_order_token RPC.'},
+      {name:'status',type:'TEXT',notes:"'ordered'→'confirmed'→'preparing'→'prepared'→'ready'→'served'|'cancelled'"},
+      {name:'notes',type:'TEXT',notes:'Kitchen notes / special instructions.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'updated_at',type:'TIMESTAMPTZ',notes:'Updated on status change.'},
+    ],
+    rpcs:['create_order_token(p_sale_id, p_business_account_id, p_notes)','update_token_status(p_token_id, p_status, p_reason?, p_metadata?)','get_active_tokens(p_business_account_id)','get_ready_unpaid_tokens(p_business_account_id)'],
+  },
+  token_status_history:{
+    desc:'Audit trail of every status change on an order token.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'token_id',type:'UUID',fk:'order_tokens(id)',notes:'CASCADE DELETE.'},
+      {name:'status',type:'TEXT',notes:'The new status that was set.'},
+      {name:'reason',type:'TEXT',notes:'Optional reason for change.'},
+      {name:'metadata',type:'JSONB',notes:'Optional additional data.'},
+      {name:'changed_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW().'},
+    ],
+  },
+  restaurant_menu:{
+    desc:'Menu items for restaurant business accounts.',
+    rls:true,
+    cols:[
+      {name:'id',type:'UUID',pk:true,notes:'DEFAULT gen_random_uuid()'},
+      {name:'business_account_id',type:'UUID',fk:'business_accounts(id)',notes:'Which restaurant this belongs to.'},
+      {name:'category',type:'TEXT',notes:'e.g. "Starters", "Main Course", "Beverages"'},
+      {name:'item_name',type:'TEXT',notes:'NOT NULL. Display name.'},
+      {name:'description',type:'TEXT',notes:'Optional description.'},
+      {name:'price',type:'NUMERIC(12,2)',notes:'Selling price.'},
+      {name:'prep_time_minutes',type:'INTEGER',notes:'Estimated preparation time.'},
+      {name:'is_available',type:'BOOLEAN',notes:'DEFAULT TRUE. Toggle to 86 an item.'},
+      {name:'is_vegetarian',type:'BOOLEAN',notes:'Veg/non-veg flag.'},
+      {name:'is_spicy',type:'BOOLEAN',notes:'Spice flag.'},
+      {name:'image_url',type:'TEXT',notes:'Optional item image.'},
+      {name:'sort_order',type:'INTEGER',notes:'Display ordering within category.'},
+      {name:'created_at',type:'TIMESTAMPTZ',notes:'DEFAULT NOW()'},
+      {name:'updated_at',type:'TIMESTAMPTZ',notes:'Updated on any change.'},
+      {name:'created_by',type:'UUID',fk:'profiles(id)',notes:'Who added this item.'},
+    ],
+    rpcs:['get_restaurant_menu(p_business_account_id, p_only_available)','get_menu_categories(p_business_account_id)'],
+  },
+},
+
+services: {
+  tokenService:{
+    file:'src/services/tokenService.ts',
+    desc:'Wraps all Supabase RPC calls for order token management. Used by KitchenDisplaySystem and SalesPage (restaurant mode).',
+    functions:[
+      {name:'createOrderToken',params:'params: TokenCreateParams',returns:'Promise<{success,data,tokenNumber,error}>',desc:'Calls create_order_token RPC. Returns the sequential token number for display. Called at end of recordSale() for restaurant orders.'},
+      {name:'updateTokenStatus',params:'params: TokenStatusUpdate',returns:'Promise<{success,data,error}>',desc:'Calls update_token_status RPC. Writes to order_tokens and token_status_history.'},
+      {name:'getActiveTokens',params:'businessAccountId: string',returns:'Promise<{success,data,count,error}>',desc:'Calls get_active_tokens RPC. Returns tokens in non-terminal statuses.'},
+      {name:'getReadyUnpaidTokens',params:'businessAccountId: string',returns:'Promise<{success,data,totalAmount,error}>',desc:'Calls get_ready_unpaid_tokens RPC. For cashier view — ready orders awaiting payment.'},
+      {name:'getTokenHistory',params:'tokenId: string',returns:'Promise<{success,data,error}>',desc:'Direct SELECT from token_status_history for a specific token.'},
+    ],
+  },
+  menuService:{
+    file:'src/services/menuService.ts',
+    desc:'CRUD operations for restaurant menu. All writes go through this service; reads use RPC for category grouping.',
+    functions:[
+      {name:'getRestaurantMenu',params:'businessAccountId: string, onlyAvailable?: boolean',returns:'Promise<MenuItem[]>',desc:'Calls get_restaurant_menu RPC. Optionally filters to is_available = true.'},
+      {name:'getMenuCategories',params:'businessAccountId: string',returns:'Promise<MenuCategory[]>',desc:'Calls get_menu_categories RPC. Returns distinct categories with item counts.'},
+      {name:'createMenuItem',params:'businessAccountId: string, itemData: Partial<MenuItem>',returns:'Promise<MenuItem>',desc:'INSERT INTO restaurant_menu. Sets business_account_id and created_by from auth.'},
+      {name:'updateMenuItem',params:'itemId: string, updates: Partial<MenuItem>',returns:'Promise<MenuItem>',desc:'UPDATE restaurant_menu WHERE id = itemId.'},
+      {name:'deleteMenuItem',params:'itemId: string',returns:'Promise<boolean>',desc:'DELETE FROM restaurant_menu WHERE id = itemId.'},
+    ],
+  },
+  forecastService:{
+    file:'src/services/forecastService.ts',
+    desc:'Calls Flask/Prophet backend at VITE_FORECAST_API_URL. Falls back to linear regression on error.',
+    functions:[
+      {name:'getForecast',params:'salesHistory: SaleRecord[], horizon: number',returns:'Promise<ForecastData[]>',desc:'POST to /forecast endpoint with historical sales data. Returns predictions per SKU with confidence intervals.'},
+      {name:'getLinearFallback',params:'salesHistory: SaleRecord[], horizon: number',returns:'ForecastData[]',desc:'Client-side linear trend fallback when Flask is unavailable.'},
+    ],
+  },
+  supabaseClient:{
+    file:'src/lib/supabaseClient.ts',
+    desc:'Initializes and exports the single Supabase client instance used throughout the app.',
+    functions:[
+      {name:'supabase',params:'(export)',returns:'SupabaseClient',desc:'Created via createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY). Shared singleton.'},
+    ],
+  },
+},
+
+features:[
+  {
+    name:'Multi-Tenant Business Accounts',
+    desc:'Users can own and switch between multiple business_accounts. Each account scopes all data queries. Enables one user to manage a standalone shop AND a restaurant.',
+    tables:['business_accounts','active_account_sessions','permissions'],
+    components:['AccountSwitcher','BusinessSetupModal'],
+    contextFns:['switchBusinessAccount','createBusinessAccount','getBusinessAccounts'],
+  },
+  {
+    name:'Franchise System',
+    desc:'Admins manage a network of franchise units. Warehouse stock (franchise_id=null) can be transferred to franchises via stock orders. Each franchise has isolated data views via RLS.',
+    tables:['franchises','inventory','stock_orders','stock_order_items'],
+    pages:['ManageFranchisesPage','StockOrdersPage','OrderStockPage','FranchiseDetailPage'],
+    contextFns:['createFranchiseUser','getAllFranchises','approveStockOrder','createStockOrder'],
+  },
+  {
+    name:'Restaurant / Kitchen Display System',
+    desc:'When business_type is restaurant, SalesPage creates order tokens. KitchenDisplaySystem shows live token board. Tokens follow a status workflow. Daily token numbering resets at midnight.',
+    tables:['order_tokens','token_status_history','restaurant_menu'],
+    pages:['KitchenDisplaySystem','TokenTracker','RestaurantMenuPage'],
+    services:['tokenService','menuService'],
+  },
+  {
+    name:'Customer Loyalty Points',
+    desc:'Customers identified by phone number. 1 point per ₹100 spent. Points redeemable at ₹1 per point. Balance shown at checkout, redeemed amount deducted from total.',
+    tables:['customers','sales'],
+    contextFns:['getCustomerByPhone','addCustomer','recordSale'],
+  },
+  {
+    name:'Advanced POS Pricing',
+    desc:'Item-level discounts (percent or flat), cart-level discounts, configurable tax rate, split payment across cash/UPI/card. All computed in SalesPage.calculateTotals().',
+    pages:['SalesPage'],
+    tables:['sales','sale_items'],
+  },
+  {
+    name:'Demand Forecasting',
+    desc:'Sales data sent to Flask + Facebook Prophet backend. Generates per-SKU forecasts with confidence intervals. Falls back to linear regression if backend unavailable.',
+    pages:['ForecastPage'],
+    services:['forecastService'],
+    envVars:['VITE_FORECAST_API_URL'],
+  },
+  {
+    name:'Realtime Data Sync',
+    desc:'Supabase Realtime subscriptions on inventory, stock_orders, and order_tokens. Changes from any client (other browser, admin panel) instantly reflect without page reload.',
+    tables:['inventory','stock_orders','order_tokens'],
+    contexts:['InventoryContext','AuthContext'],
+  },
+],
+
+envVars:[
+  {name:'VITE_SUPABASE_URL',required:true,example:'https://xyz.supabase.co',desc:'Your Supabase project URL. Found in Project Settings → API.'},
+  {name:'VITE_SUPABASE_ANON_KEY',required:true,example:'eyJhbGci...',desc:'Public anon key. Safe to expose — RLS enforces all security. Found in Project Settings → API.'},
+  {name:'VITE_FORECAST_API_URL',required:false,example:'http://localhost:5000',desc:'Flask backend URL. App works without it — ForecastPage falls back to linear trend.'},
+  {name:'VITE_RAZORPAY_KEY_ID',required:false,example:'rzp_test_...',desc:'Razorpay publishable key for payment processing. Use test key in development.'},
+],
+
+techStack:[
+  {layer:'Frontend Framework',tech:'React 18',detail:'Functional components, hooks only. No class components.'},
+  {layer:'Language',tech:'TypeScript',detail:'Strict mode. All components and contexts fully typed.'},
+  {layer:'Router',tech:'React Router v7',detail:'HashRouter (/#/path). Routes defined in App.tsx.'},
+  {layer:'Styling',tech:'Tailwind CSS v3',detail:'Utility-first. No CSS files — all inline classes.'},
+  {layer:'UI Components',tech:'shadcn/ui + Radix UI',detail:'Accessible primitives. Installed locally in src/components/ui/.'},
+  {layer:'Database',tech:'Supabase (PostgreSQL)',detail:'Row-Level Security on all tables. Realtime subscriptions.'},
+  {layer:'Auth',tech:'Supabase Auth',detail:'Email/password. JWT in localStorage. 1h access token, 7d refresh.'},
+  {layer:'Build Tool',tech:'Vite 6',detail:'HMR dev server on port 3000. Bundle output in dist/.'},
+  {layer:'Backend / ML',tech:'Flask + Prophet',detail:'Python server for forecasting. Optional — app runs without it.'},
+  {layer:'Payments',tech:'Razorpay',detail:'Webhook verified via HMAC in Supabase Edge Function.'},
+  {layer:'Edge Functions',tech:'Deno (Supabase)',detail:'razorpay-webhook function. Service role key used server-side.'},
+],
+
+};
+
+// ══════════════════════════════════════════════════════════════════
+// NAVIGATION STRUCTURE
+// ══════════════════════════════════════════════════════════════════
+const NAV = [
+  {id:'overview', label:'Overview', icon:'⬡', children:[]},
+  {id:'architecture', label:'Architecture', icon:'◈', children:[]},
+  {id:'routes', label:'Routes', icon:'⇢', badge: DATA.routes.length, children:[]},
+  {
+    id:'pages', label:'Pages', icon:'▤', badge: Object.keys(DATA.pages).length,
+    children: Object.keys(DATA.pages).map(k=>({id:'page_'+k, label:k, icon:'·'}))
+  },
+  {
+    id:'components_section', label:'Components', icon:'⬚', badge: Object.keys(DATA.components).length,
+    children: Object.keys(DATA.components).map(k=>({id:'comp_'+k, label:k, icon:'·'}))
+  },
+  {
+    id:'contexts', label:'Contexts', icon:'⊙', badge: Object.keys(DATA.contexts).length,
+    children: Object.keys(DATA.contexts).map(k=>({id:'ctx_'+k, label:k, icon:'·'}))
+  },
+  {
+    id:'database', label:'Database', icon:'⬖', badge: Object.keys(DATA.database).length,
+    children: Object.keys(DATA.database).map(k=>({id:'db_'+k, label:k, icon:'·'}))
+  },
+  {
+    id:'services', label:'Services', icon:'⚙', badge: Object.keys(DATA.services).length,
+    children: Object.keys(DATA.services).map(k=>({id:'svc_'+k, label:k, icon:'·'}))
+  },
+  {id:'features', label:'Features', icon:'★', badge: DATA.features.length, children:[]},
+  {id:'env', label:'Environment', icon:'⚑', children:[]},
+];
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ══════════════════════════════════════════════════════════════════
+function tag(label, cls, onclick) {
+  return `<span class="tag ${cls}" onclick="${onclick || ''}">${label}</span>`;
+}
+function componentTag(name) {
+  const id = 'page_'+name in DATA.pages ? 'page_'+name : 'comp_'+name;
+  return tag(name,'tag-component',`navigate('${id}')`);
+}
+function tableTag(name) {
+  return tag(name,'tag-table',`navigate('db_${name}')`);
+}
+function contextTag(name) {
+  const key = name.replace('Context','');
+  return tag(name,'tag-context',`navigate('ctx_${key}Context')`);
+}
+function serviceTag(name) {
+  return tag(name,'tag-service',`navigate('svc_${name}')`);
+}
+function roleBadge(role) {
+  if(role==='admin') return tag('Admin only','tag-admin','');
+  if(role==='franchise') return tag('Franchise only','tag-franchise','');
+  if(role==='public') return tag('Public','tag-public','');
+  return tag('Any role','tag-optional','');
+}
+function stateItem(s) {
+  return `<div class="state-item">
+    <div><span class="state-name">${s.name}</span> <span class="state-type">${s.type}</span> <span class="state-default">= ${s.init||'—'}</span></div>
+    <div class="state-desc">${s.desc}</div>
+  </div>`;
+}
+function fnItem(f) {
+  const tags = (f.tables||[]).map(t=>tableTag(t)).join(' ') + (f.contexts||[]).map(c=>contextTag(c)).join(' ');
+  return `<div class="fn-item">
+    <div class="fn-sig"><span class="fn-name">${f.name}</span>(<span class="fn-param">${f.params||''}</span>): <span class="fn-return">${f.returns||'void'}</span></div>
+    <div class="fn-desc">${f.desc}</div>
+    ${tags?`<div class="fn-tags">${tags}</div>`:''}
+  </div>`;
+}
+function colRow(c) {
+  let nameCls = 'col-name';
+  let badges = '';
+  if(c.pk) { nameCls+=' pk'; badges+=`<span class="col-pk-badge">PK</span>`; }
+  if(c.fk) { nameCls+=' fk'; badges+=`<span class="col-fk-badge">FK → ${c.fk}</span>`; }
+  return `<div class="col-row">
+    <div class="${nameCls}">${c.name}</div>
+    <div class="col-type">${c.type}</div>
+    <div class="col-notes">${badges}${c.notes||''}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE RENDERERS
+// ══════════════════════════════════════════════════════════════════
+const RENDERERS = {
+  overview() {
+    const ts = DATA.techStack.map(t=>`<tr><td><strong>${t.layer}</strong></td><td class="mono">${t.tech}</td><td style="color:var(--text2)">${t.detail}</td></tr>`).join('');
+    const stats = [
+      {label:'Routes',value:DATA.routes.length,sub:'public + protected'},
+      {label:'Page Components',value:Object.keys(DATA.pages).length,sub:'src/pages/'},
+      {label:'UI Components',value:Object.keys(DATA.components).length,sub:'src/components/'},
+      {label:'Contexts',value:2,sub:'Auth + Inventory'},
+      {label:'DB Tables',value:Object.keys(DATA.database).length,sub:'all with RLS'},
+      {label:'Services',value:Object.keys(DATA.services).length,sub:'src/services/'},
+    ];
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⬡</span> Mercanta — Codebase Overview</div>
+      <div class="page-desc">A full-stack retail & restaurant management platform. React 18 + TypeScript frontend, Supabase (PostgreSQL) backend, Flask ML forecasting. This knowledge base is your complete reference — click any component, table, or function to explore it.</div>
+    </div>
+    <div class="info-grid">${stats.map(s=>`<div class="info-card"><div class="info-card-label">${s.label}</div><div class="info-card-value">${s.value}</div><div class="info-card-sub">${s.sub}</div></div>`).join('')}</div>
+    <h2>Tech Stack</h2>
+    <table class="data-table"><thead><tr><th>Layer</th><th>Technology</th><th>Detail</th></tr></thead><tbody>${ts}</tbody></table>
+    <h2>Quick Links</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${['SalesPage','InventoryPage','KitchenDisplaySystem','AuthContext','InventoryContext'].map(c=>componentTag(c)).join('')}
+      ${['inventory','sales','order_tokens','customers'].map(t=>tableTag(t)).join('')}
+      ${['tokenService','menuService','forecastService'].map(s=>serviceTag(s)).join('')}
+    </div>`;
+  },
+
+  architecture() {
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">◈</span> Architecture</div>
+      <div class="page-desc">How data flows from the database to the user interface.</div>
+    </div>
+    <h2>Layer Diagram</h2>
+    <div class="card" style="padding:20px">
+      <div class="arch-layer"><span class="arch-label">Browser</span>
+        ${['LoginPage','SalesPage','InventoryPage','ForecastPage','AdminDashboard','KDS'].map(c=>`<div class="arch-box arch-react" onclick="navigate('page_${c}')">${c}</div>`).join('')}
+      </div>
+      <div class="arch-arrow">↓ useContext()</div>
+      <div class="arch-layer"><span class="arch-label">Contexts</span>
+        <div class="arch-box arch-context" onclick="navigate('ctx_AuthContext')">AuthContext</div>
+        <div class="arch-box arch-context" onclick="navigate('ctx_InventoryContext')">InventoryContext</div>
+      </div>
+      <div class="arch-arrow">↓ supabase.from() / RPC</div>
+      <div class="arch-layer"><span class="arch-label">Services</span>
+        <div class="arch-box arch-service" onclick="navigate('svc_tokenService')">tokenService</div>
+        <div class="arch-box arch-service" onclick="navigate('svc_menuService')">menuService</div>
+        <div class="arch-box arch-service" onclick="navigate('svc_forecastService')">forecastService</div>
+        <div class="arch-box arch-service" onclick="navigate('svc_supabaseClient')">supabaseClient</div>
+      </div>
+      <div class="arch-arrow">↓ PostgreSQL + RLS</div>
+      <div class="arch-layer"><span class="arch-label">Database</span>
+        ${['inventory','sales','customers','order_tokens','business_accounts','franchises'].map(t=>`<div class="arch-box arch-db" onclick="navigate('db_${t}')">${t}</div>`).join('')}
+      </div>
+      <div class="arch-arrow">↓ HTTP / Supabase Edge Functions</div>
+      <div class="arch-layer"><span class="arch-label">External</span>
+        <div class="arch-box arch-ext">Flask + Prophet (Forecast)</div>
+        <div class="arch-box arch-ext">Razorpay (Payments)</div>
+        <div class="arch-box arch-ext">Supabase Auth (JWT)</div>
+      </div>
+    </div>
+    <h2>Authentication Flow</h2>
+    <div class="flow-box"><span class="flow-step">1. User submits email + password</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">LoginPage.handleLogin() → supabase.auth.signInWithPassword()</span>
+<span class="flow-step">2. Supabase validates against auth.users</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Returns JWT (1h) + refresh token (7d)</span>
+<span class="flow-step">3. Tokens stored in localStorage automatically</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">key: sb-{project-id}-auth-token</span>
+<span class="flow-step">4. onAuthStateChange fires: SIGNED_IN</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">AuthContext: setUser(session.user)</span>
+<span class="flow-step">5. fetchProfile(userId)</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">SELECT * FROM profiles WHERE id = userId</span>
+<span class="flow-step">6. profile.role determines redirect</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">admin → /admin   |   franchise → /dashboard</span></div>
+    <h2>Sale Recording Flow</h2>
+    <div class="flow-box"><span class="flow-step">1. SalesPage: user builds cart, enters payment</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">handleCheckout() assembles SaleItem[] + customerInfo + payment</span>
+<span class="flow-step">2. InventoryContext.recordSale() called</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Find or create customer by phone</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">INSERT INTO sales</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">INSERT INTO sale_items (one row per product)</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">UPDATE inventory SET quantity = quantity - sold_qty WHERE sku = ?</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">UPDATE customers SET points_balance = points_balance + earned - used</span>
+<span class="flow-step">3. If restaurant order</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">tokenService.createOrderToken() → INSERT order_tokens</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Returns token_number → shown on receipt</span>
+<span class="flow-step">4. KitchenDisplaySystem receives realtime INSERT event</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Token appears on kitchen board instantly</span></div>
+    <h2>Stock Order Flow</h2>
+    <div class="flow-box"><span class="flow-step">1. Franchise user: OrderStockPage → createStockOrder()</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">INSERT stock_orders (status='pending') + stock_order_items</span>
+<span class="flow-step">2. Admin sees pending order in StockOrdersPage</span>
+<span class="flow-step">3. Admin clicks Approve → approveStockOrder(orderId)</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Fetch fresh warehouse inventory for each requested SKU</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Case A: Exact qty, franchise has no row → UPDATE franchise_id = franchiseId</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">Case B: Partial / existing → decrement warehouse + INSERT/increment franchise row</span>
+<span class="flow-arrow">   ↓</span> <span class="flow-detail">UPDATE stock_orders SET status = 'approved'</span></div>`;
+  },
+
+  routes() {
+    const header = `<div class="route-row" style="background:var(--bg3);font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">
+      <div>Path</div><div>Component</div><div>Access</div><div>Description</div></div>`;
+    const rows = DATA.routes.map(r=>`<div class="route-row">
+      <div class="route-path">${r.path}</div>
+      <div class="route-component" onclick="navigate('page_${r.component}')">${r.component}</div>
+      <div>${roleBadge(r.role)}</div>
+      <div style="color:var(--text2);font-size:12px">${r.desc}</div>
+    </div>`).join('');
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⇢</span> Routes</div>
+      <div class="page-desc">All ${DATA.routes.length} routes. Uses HashRouter — URLs look like <code>/#/dashboard</code>. ProtectedRoute wraps every authenticated page.</div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">${header}${rows}</div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">ProtectedRoute Logic</div>
+      <div style="font-size:12.5px;color:var(--text2);line-height:1.8">
+        <code>isLoading</code> → show spinner<br>
+        <code>!user</code> → redirect to <code>/login</code><br>
+        <code>!profile</code> → redirect to <code>/login</code><br>
+        <code>requiredRole='admin' && profile.role !== 'admin'</code> → redirect to <code>/dashboard</code><br>
+        <code>requiredRole='franchise' && profile.role !== 'franchise'</code> → redirect to <code>/admin</code><br>
+        otherwise → render children
+      </div>
+    </div>`;
+  },
+
+  page(key) {
+    const p = DATA.pages[key];
+    if(!p) return `<div class="page-header"><div class="page-title">Page not found</div></div>`;
+    const stateHtml = p.state ? `<h2>State Variables</h2>${p.state.map(stateItem).join('')}` : '';
+    const effectsHtml = p.effects && p.effects.length ? `<h2>useEffect Hooks</h2>${p.effects.map(e=>`
+      <div class="fn-item">
+        <div class="fn-sig">useEffect(<span class="fn-return">dep: [${e.trigger}]</span>)</div>
+        <div class="fn-desc">${e.desc}</div>
+      </div>`).join('')}` : '';
+    const memosHtml = p.memos ? `<h2>useMemo Computations</h2>${p.memos.map(m=>`
+      <div class="state-item"><div class="state-name">${m.name}</div><div class="state-desc">${m.desc}</div></div>`).join('')}` : '';
+    const fnsHtml = p.functions && p.functions.length ? `<h2>Functions</h2>${p.functions.map(fnItem).join('')}` : '';
+    const tablesHtml = p.tables && p.tables.length ? `<h2>Database Tables</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${p.tables.map(tableTag).join('')}</div>` : '';
+    const ctxHtml = p.contexts && p.contexts.length ? `<h2>Contexts Used</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${p.contexts.map(contextTag).join('')}</div>` : '';
+    const compHtml = p.components && p.components.length ? `<h2>Child Components</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${p.components.map(componentTag).join('')}</div>` : '';
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">▤</span> ${key}</div>
+      <div class="page-desc">${p.desc}</div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text3)">${p.file}</div>
+      ${p.notes?`<div style="margin-top:8px;font-size:12.5px;color:var(--text2);background:var(--bg3);padding:8px 10px;border-radius:var(--radius)">${p.notes}</div>`:''}
+    </div>
+    ${ctxHtml}${tablesHtml}${compHtml}${stateHtml}${effectsHtml}${memosHtml}${fnsHtml}`;
+  },
+
+  component(key) {
+    const c = DATA.components[key];
+    if(!c) return `<div class="page-header"><div class="page-title">Component not found</div></div>`;
+    const propsHtml = c.props ? `<h2>Props</h2><table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody>${c.props.map(p=>`<tr><td class="mono">${p.name}</td><td class="mono" style="color:var(--purple)">${p.type}</td><td>${p.required?'✓':tag('opt','tag-optional','')}</td><td style="color:var(--text2)">${p.desc}</td></tr>`).join('')}</tbody></table>` : '';
+    const ctxHtml = c.contexts && c.contexts.length ? `<h2>Contexts Used</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${c.contexts.map(contextTag).join('')}</div>` : '';
+    const tablesHtml = c.tables && c.tables.length ? `<h2>Database Tables</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${c.tables.map(tableTag).join('')}</div>` : '';
+    const logicHtml = c.logic ? `<h2>Route Guard Logic</h2><div class="flow-box">${c.logic.split('|').join('\n')}</div>` : '';
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⬚</span> ${key}</div>
+      <div class="page-desc">${c.desc}</div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><div style="font-size:12px;color:var(--text3)">${c.file}</div></div>
+    ${ctxHtml}${tablesHtml}${propsHtml}${logicHtml}`;
+  },
+
+  context(key) {
+    const ctx = DATA.contexts[key];
+    if(!ctx) return `<div class="page-header"><div class="page-title">Context not found</div></div>`;
+    const stateHtml = `<h2>State Variables</h2>${ctx.state.map(stateItem).join('')}`;
+    const fnsHtml = `<h2>Functions</h2>${ctx.functions.map(fnItem).join('')}`;
+    const ifaceHtml = `<h2>Exported Interfaces / Types</h2>${ctx.interfaces.map(i=>`
+      <div class="fn-item">
+        <div class="fn-sig"><span class="fn-name">${i.name}</span></div>
+        <div class="fn-desc" style="font-family:var(--mono);font-size:11.5px;color:var(--text2)">${i.fields}</div>
+      </div>`).join('')}`;
+    const initHtml = ctx.initialization ? `<h2>Initialization Flow</h2><div class="flow-box">${ctx.initialization}</div>` : '';
+    const dataflowHtml = ctx.dataflow ? `<h2>Data Loading Pattern</h2><div class="flow-box">${ctx.dataflow}</div>` : '';
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⊙</span> ${key}</div>
+      <div class="page-desc">${ctx.desc}</div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><div style="font-size:12px;color:var(--text3)">${ctx.file}</div></div>
+    ${stateHtml}${fnsHtml}${ifaceHtml}${initHtml}${dataflowHtml}`;
+  },
+
+  db(key) {
+    const tbl = DATA.database[key];
+    if(!tbl) return `<div class="page-header"><div class="page-title">Table not found</div></div>`;
+    const colsHtml = tbl.cols.map(colRow).join('');
+    const policiesHtml = tbl.policies ? `<h2>RLS Policies</h2>${tbl.policies.map(p=>`<div class="state-item"><div class="state-desc">${p}</div></div>`).join('')}` : '';
+    const indexesHtml = tbl.indexes ? `<h2>Indexes</h2>${tbl.indexes.map(i=>`<div class="state-item"><div class="state-name" style="font-family:var(--mono);font-size:12px">${i}</div></div>`).join('')}` : '';
+    const rpcsHtml = tbl.rpcs ? `<h2>Supabase RPCs (PostgreSQL Functions)</h2>${tbl.rpcs.map(r=>`<div class="state-item"><div class="state-name" style="font-family:var(--mono);font-size:12px">${r}</div></div>`).join('')}` : '';
+    // Who uses this table?
+    const usedByPages = Object.entries(DATA.pages).filter(([,p])=>p.tables&&p.tables.includes(key)).map(([k])=>k);
+    const usedByCtx = Object.entries(DATA.contexts).filter(([,c])=>c.functions&&c.functions.some(f=>f.desc&&f.desc.toLowerCase().includes(key))).map(([k])=>k);
+    const usedBySvc = Object.entries(DATA.services).filter(([,s])=>s.functions&&s.functions.some(f=>f.desc&&f.desc.toLowerCase().includes(key))).map(([k])=>k);
+    const usedByHtml = (usedByPages.length||usedByCtx.length||usedBySvc.length) ? `<h2>Used By</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${usedByPages.map(componentTag).join('')}${usedByCtx.map(contextTag).join('')}${usedBySvc.map(serviceTag).join('')}</div>` : '';
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⬖</span> <code>${key}</code></div>
+      <div class="page-desc">${tbl.desc}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      ${tbl.rls?`<span class="table-rls">RLS ENABLED</span>`:''}
+    </div>
+    <h2>Columns</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="col-row" style="background:var(--bg3);font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">
+        <div>Column</div><div>Type</div><div>Notes</div>
+      </div>
+      ${colsHtml}
+    </div>
+    ${policiesHtml}${indexesHtml}${rpcsHtml}${usedByHtml}`;
+  },
+
+  service(key) {
+    const svc = DATA.services[key];
+    if(!svc) return `<div class="page-header"><div class="page-title">Service not found</div></div>`;
+    const fnsHtml = `<h2>Functions</h2>${svc.functions.map(fnItem).join('')}`;
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⚙</span> ${key}</div>
+      <div class="page-desc">${svc.desc}</div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><div style="font-size:12px;color:var(--text3)">${svc.file}</div></div>
+    ${fnsHtml}`;
+  },
+
+  features() {
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">★</span> Features</div>
+      <div class="page-desc">The ${DATA.features.length} major product features and which code drives them.</div>
+    </div>
+    ${DATA.features.map((f,i)=>`
+    <div class="card">
+      <div class="card-title">${i+1}. ${f.name}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">${f.desc}</div>
+      ${f.tables?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${f.tables.map(tableTag).join('')}</div>`:''}
+      ${f.pages?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${f.pages.map(componentTag).join('')}</div>`:''}
+      ${f.services?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${f.services.map(serviceTag).join('')}</div>`:''}
+      ${f.contexts?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${f.contexts.map(contextTag).join('')}</div>`:''}
+      ${f.contextFns?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${f.contextFns.map(n=>`<code>${n}()</code>`).join('')}</div>`:''}
+      ${f.envVars?`<div style="display:flex;flex-wrap:wrap;gap:5px">${f.envVars.map(e=>`<code>${e}</code>`).join('')}</div>`:''}
+    </div>`).join('')}`;
+  },
+
+  env() {
+    return `
+    <div class="page-header">
+      <div class="page-title"><span class="page-icon">⚑</span> Environment Variables</div>
+      <div class="page-desc">Create a <code>.env</code> file at the project root. Never commit it — it's in .gitignore.</div>
+    </div>
+    ${DATA.envVars.map(v=>`
+    <div class="card">
+      <div class="card-title"><code style="font-size:13px">${v.name}</code> ${v.required?tag('Required','tag-admin',''):tag('Optional','tag-optional','')}</div>
+      <div style="font-family:var(--mono);font-size:11.5px;color:var(--text3);margin-bottom:6px">Example: ${v.example}</div>
+      <div style="font-size:13px;color:var(--text2)">${v.desc}</div>
+    </div>`).join('')}
+    <h2>How Variables Are Read</h2>
+    <div class="flow-box">// src/lib/supabaseClient.ts
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// VITE_ prefix = available in browser bundle
+// Variables without VITE_ prefix are NOT embedded in the bundle</div>`;
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// ROUTER
+// ══════════════════════════════════════════════════════════════════
+let currentPage = 'overview';
+
+function navigate(id) {
+  currentPage = id;
+  renderContent();
+  updateNav();
+  document.getElementById('content').scrollTop = 0;
+  // Auto-expand parent section if needed
+  const section = NAV.find(s=>s.children&&s.children.some(c=>c.id===id));
+  if(section) {
+    const el = document.getElementById('section_'+section.id);
+    if(el) {
+      el.style.display = 'block';
+      const arrow = document.getElementById('arrow_'+section.id);
+      if(arrow) arrow.classList.add('open');
+    }
+  }
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  if(currentPage === 'overview') el.innerHTML = RENDERERS.overview();
+  else if(currentPage === 'architecture') el.innerHTML = RENDERERS.architecture();
+  else if(currentPage === 'routes') el.innerHTML = RENDERERS.routes();
+  else if(currentPage === 'features') el.innerHTML = RENDERERS.features();
+  else if(currentPage === 'env') el.innerHTML = RENDERERS.env();
+  else if(currentPage.startsWith('page_')) el.innerHTML = RENDERERS.page(currentPage.slice(5));
+  else if(currentPage.startsWith('comp_')) el.innerHTML = RENDERERS.component(currentPage.slice(5));
+  else if(currentPage.startsWith('ctx_')) el.innerHTML = RENDERERS.context(currentPage.slice(4));
+  else if(currentPage.startsWith('db_')) el.innerHTML = RENDERERS.db(currentPage.slice(3));
+  else if(currentPage.startsWith('svc_')) el.innerHTML = RENDERERS.service(currentPage.slice(4));
+  else el.innerHTML = RENDERERS.overview();
+  // Update breadcrumb
+  updateBreadcrumb();
+}
+
+function updateBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  let parts = ['Mercanta KB'];
+  if(currentPage.startsWith('page_')) parts.push('Pages', currentPage.slice(5));
+  else if(currentPage.startsWith('comp_')) parts.push('Components', currentPage.slice(5));
+  else if(currentPage.startsWith('ctx_')) parts.push('Contexts', currentPage.slice(4));
+  else if(currentPage.startsWith('db_')) parts.push('Database', currentPage.slice(3));
+  else if(currentPage.startsWith('svc_')) parts.push('Services', currentPage.slice(4));
+  else parts.push(currentPage.charAt(0).toUpperCase()+currentPage.slice(1));
+  bc.innerHTML = parts.map((p,i)=>i===parts.length-1?`<span>${p}</span>`:`<span style="cursor:pointer;color:var(--text3)" onclick="navigate('${i===0?'overview':currentPage}')">${p}</span><span class="sep">›</span>`).join('');
+}
+
+function updateNav() {
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.id === currentPage);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SIDEBAR BUILD
+// ══════════════════════════════════════════════════════════════════
+function buildSidebar() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = NAV.map(section => {
+    const hasChildren = section.children && section.children.length > 0;
+    const badge = section.badge ? `<span class="nav-badge">${section.badge}</span>` : '';
+    if(!hasChildren) {
+      return `<div class="nav-section">
+        <div class="nav-item${currentPage===section.id?' active':''}" data-id="${section.id}" onclick="navigate('${section.id}')">
+          <span class="nav-icon">${section.icon}</span>${section.label}${badge}
+        </div>
+      </div>`;
+    }
+    const isOpen = section.children.some(c=>c.id===currentPage);
+    const items = section.children.map(c=>`
+      <div class="nav-item${currentPage===c.id?' active':''}" data-id="${c.id}" onclick="navigate('${c.id}')">
+        <span class="nav-icon">${c.icon}</span>${c.label}
+      </div>`).join('');
+    return `<div class="nav-section">
+      <div class="nav-section-header" onclick="toggleSection('${section.id}')">
+        <span><span style="margin-right:6px">${section.icon}</span>${section.label}${badge}</span>
+        <span class="nav-arrow${isOpen?' open':''}" id="arrow_${section.id}">▶</span>
+      </div>
+      <div class="nav-items" id="section_${section.id}" style="display:${isOpen?'block':'none'}">${items}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSection(id) {
+  const el = document.getElementById('section_'+id);
+  const arrow = document.getElementById('arrow_'+id);
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if(arrow) arrow.classList.toggle('open', !isOpen);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════════════════════════
+function buildSearchIndex() {
+  const idx = [];
+  DATA.routes.forEach(r=>{
+    idx.push({id:'page_'+r.component,name:r.component,path:r.path,type:'Route',color:'tag-route'});
+  });
+  Object.entries(DATA.pages).forEach(([k,v])=>{
+    idx.push({id:'page_'+k,name:k,path:v.file,type:'Page',color:'tag-component'});
+    (v.state||[]).forEach(s=>idx.push({id:'page_'+k,name:s.name+' (state)',path:k+' → '+v.file,type:'State',color:'tag-optional'}));
+    (v.functions||[]).forEach(f=>idx.push({id:'page_'+k,name:f.name+'()',path:k,type:'Function',color:'tag-service'}));
+  });
+  Object.entries(DATA.components).forEach(([k,v])=>{
+    idx.push({id:'comp_'+k,name:k,path:v.file,type:'Component',color:'tag-component'});
+  });
+  Object.entries(DATA.contexts).forEach(([k,v])=>{
+    idx.push({id:'ctx_'+k,name:k,path:v.file,type:'Context',color:'tag-context'});
+    v.state.forEach(s=>idx.push({id:'ctx_'+k,name:s.name+' (context state)',path:k,type:'State',color:'tag-optional'}));
+    v.functions.forEach(f=>idx.push({id:'ctx_'+k,name:f.name+'()',path:k,type:'Function',color:'tag-service'}));
+  });
+  Object.entries(DATA.database).forEach(([k,v])=>{
+    idx.push({id:'db_'+k,name:k,path:'Database table',type:'Table',color:'tag-table'});
+    v.cols.forEach(c=>idx.push({id:'db_'+k,name:c.name+' (column)',path:k,type:'Column',color:'tag-optional'}));
+  });
+  Object.entries(DATA.services).forEach(([k,v])=>{
+    idx.push({id:'svc_'+k,name:k,path:v.file,type:'Service',color:'tag-service'});
+    v.functions.forEach(f=>idx.push({id:'svc_'+k,name:f.name+'()',path:k,type:'Function',color:'tag-service'}));
+  });
+  DATA.features.forEach((f,i)=>{
+    idx.push({id:'features',name:f.name,path:'Features',type:'Feature',color:'tag-public'});
+  });
+  return idx;
+}
+
+const searchIndex = buildSearchIndex();
+let searchFocused = 0;
+
+function openSearch() {
+  document.getElementById('search-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('search-input').focus(),50);
+}
+function closeSearch() {
+  document.getElementById('search-modal').classList.remove('open');
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '';
+}
+
+document.getElementById('search-btn').onclick = openSearch;
+document.getElementById('search-modal').onclick = function(e) {
+  if(e.target === this) closeSearch();
+};
+
+document.getElementById('search-input').oninput = function() {
+  const q = this.value.toLowerCase().trim();
+  const results = document.getElementById('search-results');
+  if(!q) { results.innerHTML = ''; return; }
+  const matches = searchIndex.filter(item=>
+    item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q) || item.type.toLowerCase().includes(q)
+  ).slice(0,15);
+  if(!matches.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
+  searchFocused = 0;
+  results.innerHTML = matches.map((m,i)=>`
+    <div class="search-result${i===0?' focused':''}" onclick="navigate('${m.id}');closeSearch()" data-idx="${i}">
+      <span class="tag ${m.color}" style="flex-shrink:0">${m.type}</span>
+      <div><div class="search-result-name">${m.name}</div><div class="search-result-path">${m.path}</div></div>
+    </div>`).join('');
+  // Store for keyboard nav
+  results._matches = matches;
+};
+
+document.getElementById('search-input').onkeydown = function(e) {
+  const results = document.getElementById('search-results');
+  const items = results.querySelectorAll('.search-result');
+  if(e.key==='ArrowDown') { e.preventDefault(); searchFocused=Math.min(searchFocused+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('focused',i===searchFocused)); }
+  else if(e.key==='ArrowUp') { e.preventDefault(); searchFocused=Math.max(searchFocused-1,0); items.forEach((el,i)=>el.classList.toggle('focused',i===searchFocused)); }
+  else if(e.key==='Enter') { const m=results._matches&&results._matches[searchFocused]; if(m){navigate(m.id);closeSearch();} }
+  else if(e.key==='Escape') closeSearch();
+};
+
+// Nav filter
+document.getElementById('nav-filter').oninput = function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.style.display = !q||el.textContent.toLowerCase().includes(q)?'':'none';
+  });
+  if(q) {
+    document.querySelectorAll('.nav-items').forEach(el=>el.style.display='block');
+    document.querySelectorAll('.nav-arrow').forEach(el=>el.classList.add('open'));
+  }
+};
+
+// Global keyboard shortcut
+document.addEventListener('keydown', function(e) {
+  if((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); openSearch(); }
+  if(e.key==='Escape' && document.getElementById('search-modal').classList.contains('open')) closeSearch();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+buildSidebar();
+renderContent();
+
+// Handle hash navigation (for direct links)
+if(location.hash && location.hash.startsWith('#/')) {
+  const id = location.hash.slice(2);
+  if(id) navigate(id);
+}
+</script>
+</body>
+</html>
