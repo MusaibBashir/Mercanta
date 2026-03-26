@@ -2,9 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Scan, Keyboard, Plus, Trash2, IndianRupee, Search, CreditCard, Banknote, Smartphone, RefreshCw, PauseCircle, PlayCircle, Printer, Camera, Star } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
 import { useInventory } from "../context/InventoryContext";
 import { useAuth } from "../context/AuthContext";
@@ -86,9 +84,24 @@ export function SalesPage() {
     const [isRestaurantOrder, setIsRestaurantOrder] = useState(false);
     const [specialInstructions, setSpecialInstructions] = useState("");
 
+    // Auto-enable token creation for restaurant accounts
+    useEffect(() => {
+        if (activeBusinessAccount?.business_type === "restaurant") {
+            setIsRestaurantOrder(true);
+        }
+    }, [activeBusinessAccount?.business_type]);
+
     // Payment Method State
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'split'>('cash');
-    const [paymentDetails, setPaymentDetails] = useState({ cash: 0, upi: 0, card: 0 });
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card'>('cash');
+
+    // Print toggle state
+    const [printReceiptEnabled, setPrintReceiptEnabled] = useState(true);
+    const [printTokenEnabled, setPrintTokenEnabled] = useState(true);
+    const [isSpecialInstructionsOpen, setIsSpecialInstructionsOpen] = useState(false);
+    const [isDiscountOpen, setIsDiscountOpen] = useState(false);
+
+    // Customer section collapsed state
+    const [isCustomerSectionOpen, setIsCustomerSectionOpen] = useState(false);
 
     // Advanced Pricing State
     const [cartDiscountType, setCartDiscountType] = useState<'percent' | 'flat'>('flat');
@@ -263,7 +276,7 @@ export function SalesPage() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [items, customerName, paymentMethod, paymentDetails, grandTotal]); // Dependencies needed for complete sale/hold sale handlers
+    }, [items, customerName, paymentMethod, grandTotal]); // Dependencies needed for complete sale/hold sale handlers
 
     const handleSelectItem = (itemIdentifier: string) => {
         if (activeBusinessAccount?.business_type === "restaurant") {
@@ -273,7 +286,7 @@ export function SalesPage() {
                 setSelectedSku(menuItem.id); // Use item ID as SKU equivalent
                 setItemName(menuItem.item_name);
                 setPrice(menuItem.price);
-                setSearchQuery(menuItem.item_name);
+                setSearchQuery("");
             }
         } else {
             // For franchises, use SKU lookup
@@ -282,7 +295,7 @@ export function SalesPage() {
             if (item) {
                 setItemName(item.itemName);
                 setPrice(item.price);
-                setSearchQuery(item.itemName);
+                setSearchQuery("");
             }
         }
         setIsDropdownOpen(false);
@@ -485,20 +498,15 @@ export function SalesPage() {
             return;
         }
 
-        if (!customerName) {
-            toast.error("Please enter customer name");
-            return;
-        }
-
-        if (paymentMethod === 'split') {
-            const splitTotal = (paymentDetails.cash || 0) + (paymentDetails.upi || 0) + (paymentDetails.card || 0);
-            if (Math.abs(splitTotal - grandTotal) > 0.01) {
-                toast.error(`Split payment amounts (₹${splitTotal.toFixed(2)}) must equal the grand total (₹${grandTotal.toFixed(2)})`);
-                return;
-            }
+        // Default to "Walk-in" if no customer name provided
+        const finalCustomerName = customerName.trim() || "Walk-in";
+        if (!customerName.trim()) {
+            setCustomerName(finalCustomerName);
         }
 
         const processSale = async (transactionId?: string, printWindow?: Window | null, skipReceiptAndReset?: boolean) => {
+            // Use finalCustomerName (defaults to "Walk-in" if blank)
+            const effectiveCustomerName = finalCustomerName;
             // Record the sale and update inventory
             const saleResult = await recordSale({
                 items: items.map(item => ({
@@ -510,7 +518,7 @@ export function SalesPage() {
                     discountType: item.discountType,
                     discountValue: item.discountValue,
                 })),
-                customerName,
+                customerName: effectiveCustomerName,
                 customerPhone,
                 customerEmail,
                 total: grandTotal,
@@ -519,9 +527,7 @@ export function SalesPage() {
                 taxRate,
                 taxAmount,
                 paymentMethod,
-                paymentDetails: (paymentMethod === 'split'
-                    ? paymentDetails
-                    : (transactionId ? { razorpay_payment_id: transactionId } : undefined)) as any,
+                paymentDetails: (transactionId ? { razorpay_payment_id: transactionId } : undefined) as any,
                 pointsUsed: actualPointsUsed
             }, {
                 // Skip inventory checks for restaurant orders
@@ -541,20 +547,22 @@ export function SalesPage() {
                         const tokenResult = await createOrderToken({
                             sale_id: saleResult.saleId,
                             business_account_id: activeBusinessAccount.id,
-                            customer_name: customerName,
+                            customer_name: effectiveCustomerName,
                             order_items: items.map(item => `${item.name} x${item.quantity}`).join(", "),
                             notes: specialInstructions,
                             is_restaurant_order: true
                         });
                         if (tokenResult.success) {
                             const itemsStr = items.map(item => `${item.name} x${item.quantity}`).join("\n");
-                            printTokenReceipt(
-                                tokenResult.data.token_number,
-                                customerName,
-                                itemsStr,
-                                grandTotal,
-                                specialInstructions
-                            );
+                            if (printTokenEnabled) {
+                                printTokenReceipt(
+                                    tokenResult.data.token_number,
+                                    effectiveCustomerName,
+                                    itemsStr,
+                                    grandTotal,
+                                    specialInstructions
+                                );
+                            }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
                         }
                     } catch (error) {
@@ -571,7 +579,7 @@ export function SalesPage() {
                         const tokenResult = await createOrderToken({
                             sale_id: saleResult.saleId,
                             business_account_id: activeBusinessAccount.id,
-                            customer_name: customerName,
+                            customer_name: effectiveCustomerName,
                             order_items: items.map(item => `${item.name} x${item.quantity}`).join(", "),
                             notes: specialInstructions,
                             is_restaurant_order: true
@@ -580,13 +588,15 @@ export function SalesPage() {
                         if (tokenResult.success) {
                             // Print token receipt if enabled
                             const itemsStr = items.map(item => `${item.name} x${item.quantity}`).join("\n");
-                            printTokenReceipt(
-                                tokenResult.data.token_number,
-                                customerName,
-                                itemsStr,
-                                grandTotal,
-                                specialInstructions
-                            );
+                            if (printTokenEnabled) {
+                                printTokenReceipt(
+                                    tokenResult.data.token_number,
+                                    effectiveCustomerName,
+                                    itemsStr,
+                                    grandTotal,
+                                    specialInstructions
+                                );
+                            }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
                         } else {
                             console.error("Token creation failed:", tokenResult.error);
@@ -597,11 +607,11 @@ export function SalesPage() {
                     }
                 }
 
-                // Print receipt in a new window (cash/split path)
-                printReceipt(
+                // Print receipt in a new window (cash path)
+                if (printReceiptEnabled) printReceipt(
                     {
                         date: new Date().toISOString(),
-                        customerName,
+                        customerName: effectiveCustomerName,
                         customerPhone,
                         customerEmail,
                         items: items.map(item => ({
@@ -618,7 +628,6 @@ export function SalesPage() {
                         taxAmount,
                         total: grandTotal,
                         paymentMethod,
-                        paymentDetails: paymentMethod === 'split' ? paymentDetails : undefined,
                         transactionId,
                     },
                     {
@@ -633,7 +642,7 @@ export function SalesPage() {
                 toast.success("Sale completed successfully!");
             } else {
                 const errorMsg = profile?.role === "admin" 
-                    ? `Sale failed: ${error || "Database error"}` 
+                    ? `Sale failed: Database error`
                     : "Failed to complete sale. Check console for details.";
                 toast.error(errorMsg);
             }
@@ -661,7 +670,7 @@ export function SalesPage() {
             const receiptTaxRate = taxRate;
             const receiptTaxAmount = taxAmount;
             const receiptGrandTotal = grandTotal;
-            const receiptCustomerName = customerName;
+            const receiptCustomerName = finalCustomerName;
             const receiptCustomerPhone = customerPhone;
             const receiptCustomerEmail = customerEmail;
             const receiptPaymentMethod = paymentMethod;
@@ -686,7 +695,7 @@ export function SalesPage() {
 
                     // Print the receipt IMMEDIATELY — all data is already captured above.
                     // Do NOT wait for the DB recordSale call.
-                    printReceipt(
+                    if (printReceiptEnabled) printReceipt(
                         {
                             date: new Date().toISOString(),
                             customerName: receiptCustomerName,
@@ -726,7 +735,7 @@ export function SalesPage() {
                     }
                 },
                 prefill: {
-                    name: customerName,
+                    name: finalCustomerName,
                     email: customerEmail,
                     contact: customerPhone,
                 },
@@ -759,7 +768,6 @@ export function SalesPage() {
         setCartDiscountValue(0);
         // setTaxRate(0); // Keeping tax rate context
         setPaymentMethod('cash');
-        setPaymentDetails({ cash: 0, upi: 0, card: 0 });
         setCustomerPointsBalance(0);
         setPointsToUse(0);
     };
@@ -813,497 +821,431 @@ export function SalesPage() {
         }
     };
 
+
     return (
         <PageContainer
             title="New Sale"
-            subtitle="Add items and customer details"
-            icon={<IndianRupee className="w-5 h-5 text-green-600" />}
-            iconBgColor="bg-green-100"
+            subtitle="Add items and process payment"
+            icon={<IndianRupee className="w-5 h-5 text-purple-600" />}
+            iconBgColor="bg-purple-100"
         >
-            <div className="grid grid-cols-2 gap-6">
-                {/* Left Column - Item Entry */}
-                <div className="space-y-6">
-                    <Card className="border border-gray-200">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Add Item</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Entry Mode Toggle */}
-                            {/* Entry Mode Toggle - Only for franchises */}
-                            {activeBusinessAccount?.business_type !== "restaurant" && (
-                                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-                                    <button
-                                        onClick={() => setEntryMode("manual")}
-                                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${entryMode === "manual"
-                                            ? "bg-white text-gray-900 shadow-sm"
-                                            : "text-gray-600 hover:text-gray-900"
-                                            }`}
-                                    >
-                                        <Keyboard className="w-4 h-4" />
-                                        Manual Entry
-                                    </button>
-                                    <button
-                                        onClick={() => setEntryMode("barcode")}
-                                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${entryMode === "barcode"
-                                            ? "bg-white text-gray-900 shadow-sm"
-                                            : "text-gray-600 hover:text-gray-900"
-                                            }`}
-                                    >
+            <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-6">
+
+                {/* ── LEFT COLUMN ── Item entry + Cart ── */}
+                <div className="space-y-4">
+
+                    {/* Search + Add Item Card */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
+
+                        {/* Entry mode toggle (franchise only) */}
+                        {activeBusinessAccount?.business_type !== "restaurant" && (
+                            <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+                                <button
+                                    onClick={() => setEntryMode("manual")}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${entryMode === "manual" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                >
+                                    <Keyboard className="w-4 h-4" />
+                                    Manual
+                                </button>
+                                <button
+                                    onClick={() => setEntryMode("barcode")}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${entryMode === "barcode" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                >
+                                    <Scan className="w-4 h-4" />
+                                    Barcode
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Barcode input (franchise + barcode mode) */}
+                        {activeBusinessAccount?.business_type !== "restaurant" && entryMode === "barcode" && (
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="barcode"
+                                        value={barcode}
+                                        onChange={(e) => setBarcode(e.target.value)}
+                                        placeholder="Scan or type barcode..."
+                                        className="flex-1"
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScanBarcode(); } }}
+                                    />
+                                    <Button onClick={() => handleScanBarcode()} variant="outline" className="px-3" title="Search Barcode">
                                         <Scan className="w-4 h-4" />
-                                        Scan Barcode
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Barcode Scanner - Only for franchises */}
-                            {activeBusinessAccount?.business_type !== "restaurant" && entryMode === "barcode" && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="barcode">Barcode</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="barcode"
-                                                value={barcode}
-                                                onChange={(e) => setBarcode(e.target.value)}
-                                                placeholder="Scan or enter barcode"
-                                                className="flex-1"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleScanBarcode();
-                                                    }
-                                                }}
-                                            />
-                                            <Button
-                                                onClick={() => handleScanBarcode()}
-                                                variant="outline"
-                                                className="px-3"
-                                                title="Search Barcode"
-                                            >
-                                                <Scan className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative flex items-center py-2">
-                                        <div className="flex-grow border-t border-gray-200"></div>
-                                        <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">OR</span>
-                                        <div className="flex-grow border-t border-gray-200"></div>
-                                    </div>
-
-                                    <Button
-                                        onClick={() => setIsScanning(true)}
-                                        variant="outline"
-                                        className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
-                                    >
-                                        <Camera className="w-4 h-4 mr-2" />
-                                        Scan with Camera
                                     </Button>
-
-                                    {isScanning && (
-                                        <CameraScanner
-                                            onScan={(decodedText) => {
-                                                handleScanBarcode(decodedText);
-                                            }}
-                                            onClose={() => setIsScanning(false)}
-                                        />
-                                    )}
                                 </div>
-                            )}
+                                <div className="relative flex items-center">
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                    <span className="flex-shrink-0 mx-3 text-gray-400 text-xs">OR</span>
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                </div>
+                                <Button onClick={() => setIsScanning(true)} variant="outline" className="w-full text-blue-600 border-blue-200 hover:bg-blue-50">
+                                    <Camera className="w-4 h-4 mr-2" />
+                                    Scan with Camera
+                                </Button>
+                                {isScanning && (
+                                    <CameraScanner onScan={(decodedText) => { handleScanBarcode(decodedText); }} onClose={() => setIsScanning(false)} />
+                                )}
+                            </div>
+                        )}
 
-                            {/* Item Details - Fuzzy Search */}
-                            <div className="space-y-2" ref={dropdownRef}>
-                                <Label htmlFor="itemSearch">Search Item *</Label>
-                                <div className="relative">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            id="itemSearch"
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={(e: any) => {
-                                                setSearchQuery(e.target.value);
-                                                setIsDropdownOpen(true);
-                                                if (!e.target.value) {
-                                                    setSelectedSku("");
-                                                    setItemName("");
-                                                    setPrice(0);
-                                                }
-                                            }}
-                                            onFocus={() => setIsDropdownOpen(true)}
-                                            placeholder="Type to search items..."
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    {isDropdownOpen && (
-                                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                            {filteredInventory.length === 0 ? (
-                                                <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                                                    No items found{searchQuery && " — try a different search"}
-                                                </div>
-                                            ) : (
-                                                filteredInventory.map((item: any) => {
-                                                    const isRestaurant = activeBusinessAccount?.business_type === "restaurant";
-                                                    const itemId = isRestaurant ? item.id : item.sku;
-                                                    const itemName = isRestaurant ? item.item_name : item.itemName;
-                                                    return (
-                                                        <button
-                                                            key={itemId}
-                                                            type="button"
-                                                            onClick={() => handleSelectItem(itemName)}
-                                                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors ${selectedSku === itemId ? "bg-blue-50" : ""
-                                                                }`}
-                                                        >
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-gray-900">{itemName}</p>
-                                                                    {isRestaurant ? (
-                                                                        <>
-                                                                            <p className="text-xs text-gray-500">{item.category}</p>
-                                                                            {item.description && (
-                                                                                <p className="text-xs text-gray-400">{item.description}</p>
-                                                                            )}
-                                                                        </>
-                                                                    ) : (
-                                                                        <p className="text-xs text-gray-500">SKU: {item.sku}</p>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="text-sm font-medium text-gray-700">₹{item.price.toFixed(2)}</p>
-                                                                    {!isRestaurant && (
-                                                                        <p className={`text-xs ${item.quantity > 0 ? "text-green-600" : "text-red-500"}`}>
-                                                                            {item.quantity} in stock
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })
-                                            )}
+                        {/* Fuzzy search input */}
+                        <div ref={dropdownRef} className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                            <input
+                                id="itemSearch"
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e: any) => {
+                                    setSearchQuery(e.target.value);
+                                    setIsDropdownOpen(true);
+                                    if (!e.target.value) { setSelectedSku(""); setItemName(""); setPrice(0); }
+                                }}
+                                onFocus={() => setIsDropdownOpen(true)}
+                                placeholder={activeBusinessAccount?.business_type === "restaurant" ? "Search menu items..." : "Search items... (F2)"}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
+                                autoComplete="off"
+                            />
+                            {isDropdownOpen && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                                    {filteredInventory.length === 0 ? (
+                                        <div className="px-4 py-4 text-sm text-gray-500 text-center">
+                                            No items found{searchQuery && " — try a different search"}
                                         </div>
+                                    ) : (
+                                        filteredInventory.map((item: any) => {
+                                            const isRestaurant = activeBusinessAccount?.business_type === "restaurant";
+                                            const itemId = isRestaurant ? item.id : item.sku;
+                                            const displayName = isRestaurant ? item.item_name : item.itemName;
+                                            return (
+                                                <button
+                                                    key={itemId}
+                                                    type="button"
+                                                    onClick={() => handleSelectItem(displayName)}
+                                                    className={`w-full text-left px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors ${selectedSku === itemId ? "bg-purple-50" : ""}`}
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                                                            {isRestaurant ? (
+                                                                <p className="text-xs text-gray-500">{item.category}</p>
+                                                            ) : (
+                                                                <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right ml-3 shrink-0">
+                                                            <p className="text-sm font-bold text-purple-700">₹{item.price.toFixed(2)}</p>
+                                                            {!isRestaurant && (
+                                                                <p className={`text-xs ${item.quantity > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                                                    {item.quantity} in stock
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
                                     )}
                                 </div>
-                            </div>
-
-                            {selectedSku && (
-                                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                    <p className="text-sm font-medium text-gray-900">{itemName}</p>
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        Price: ₹{price.toFixed(2)} | Stock: {getInventoryBySku(selectedSku)?.quantity || 0} units
-                                    </p>
-                                </div>
                             )}
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="quantity">Quantity *</Label>
-                                    <Input
-                                        id="quantity"
-                                        type="number"
-                                        min="1"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="price">Price (₹) *</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={price}
-                                        onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                                    />
-                                </div>
-                            </div>
-
-                            <Button
-                                onClick={handleAddItem}
-                                className="w-full bg-gray-900 hover:bg-gray-800"
-                            >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Item
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    {/* Customer Details */}
-                    <Card className="border border-gray-200">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Customer Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Phone Number First - for customer lookup */}
-                            <div className="space-y-2">
-                                <Label htmlFor="customerPhone">
-                                    Phone Number *
-                                    {isLookingUpCustomer && <span className="ml-2 text-sm text-blue-500">(Looking up...)</span>}
-                                </Label>
-                                <Input
-                                    id="customerPhone"
-                                    type="tel"
-                                    value={customerPhone}
-                                    onChange={(e) => handlePhoneChange(e.target.value)}
-                                    placeholder="Enter phone number to auto-fill customer"
-                                />
-                                <p className="text-xs text-gray-500">Enter phone to find existing customer or create new</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="customerName">Customer Name *</Label>
-                                <Input
-                                    id="customerName"
-                                    value={customerName}
-                                    onChange={(e) => setCustomerName(e.target.value)}
-                                    placeholder="Enter customer name"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="customerEmail">Email</Label>
-                                <Input
-                                    id="customerEmail"
-                                    type="email"
-                                    value={customerEmail}
-                                    onChange={(e) => setCustomerEmail(e.target.value)}
-                                    placeholder="Enter email address"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Additional Notes</Label>
-                                <Textarea
-                                    id="notes"
-                                    value={additionalNotes}
-                                    onChange={(e) => setAdditionalNotes(e.target.value)}
-                                    placeholder="Any special instructions or notes"
-                                    rows={3}
-                                />
-                            </div>
-
-                            {/* Restaurant Order Option */}
-                            {activeBusinessAccount?.business_type === "restaurant" && (
-                                <>
-                                    <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                                        <input
-                                            type="checkbox"
-                                            id="isRestaurantOrder"
-                                            checked={isRestaurantOrder}
-                                            onChange={(e) => setIsRestaurantOrder(e.target.checked)}
-                                            className="w-4 h-4"
-                                        />
-                                        <label htmlFor="isRestaurantOrder" className="text-sm font-medium text-gray-700">
-                                            🍽️ Create Order Token
-                                        </label>
+                        {/* Selected item: name + price + qty stepper */}
+                        {selectedSku && (
+                            <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{itemName}</p>
+                                        <p className="text-sm text-purple-700 font-medium">₹{price.toFixed(2)} each</p>
                                     </div>
-
-                                    {isRestaurantOrder && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="specialInstructions">Special Instructions</Label>
-                                            <Textarea
-                                                id="specialInstructions"
-                                                value={specialInstructions}
-                                                onChange={(e) => setSpecialInstructions(e.target.value)}
-                                                placeholder="E.g., No peanuts, Extra sauce, Mild spice..."
-                                                rows={2}
-                                            />
-                                        </div>
+                                    {activeBusinessAccount?.business_type !== "restaurant" && (
+                                        <span className="text-xs text-gray-500 bg-white rounded-lg px-2 py-1 border border-gray-200">
+                                            {getInventoryBySku(selectedSku)?.quantity ?? 0} in stock
+                                        </span>
                                     )}
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                                </div>
+                                {/* Quantity stepper */}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm text-gray-600 font-medium">Qty:</span>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                            className="w-9 h-9 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
+                                        >−</button>
+                                        <span className="w-10 text-center font-semibold text-gray-900 text-base">{quantity}</span>
+                                        <button
+                                            onClick={() => setQuantity(q => q + 1)}
+                                            className="w-9 h-9 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
+                                        >+</button>
+                                    </div>
+                                    <span className="ml-auto text-sm font-semibold text-gray-700">= ₹{(price * quantity).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
 
-                {/* Right Column - Items List & Summary */}
-                <div className="space-y-6">
-                    <Card className="border border-gray-200">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-lg">Items ({items.length})</CardTitle>
+                        {/* Add to Cart button */}
+                        <button
+                            onClick={handleAddItem}
+                            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add to Cart
+                        </button>
+                    </div>
+
+                    {/* Cart Items Card */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                        {/* Cart header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <h2 className="font-bold text-gray-900 text-base">
+                                Cart <span className="text-gray-400 font-normal text-sm">({items.length} item{items.length !== 1 ? "s" : ""})</span>
+                            </h2>
                             <div className="flex gap-2">
                                 {hasHeldSale && items.length === 0 && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
+                                    <button
                                         onClick={handleResumeSale}
-                                        className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                                        title="Resume Held Sale"
+                                        className="flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-2 py-1 hover:bg-orange-100 transition-colors"
                                     >
-                                        <PlayCircle className="w-4 h-4 mr-1" />
+                                        <PlayCircle className="w-3.5 h-3.5" />
                                         Resume
-                                    </Button>
+                                    </button>
                                 )}
                                 {items.length > 0 && (
                                     <>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
+                                        <button
                                             onClick={handleHoldSale}
-                                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                            title="Hold Sale"
+                                            className="flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors"
                                         >
-                                            <PauseCircle className="w-4 h-4 mr-1" />
+                                            <PauseCircle className="w-3.5 h-3.5" />
                                             Hold
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
+                                        </button>
+                                        <button
                                             onClick={handleClearCart}
-                                            className="text-red-600 border-red-200 hover:bg-red-50"
-                                            title="Clear Cart"
+                                            className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-100 transition-colors"
                                         >
-                                            <RefreshCw className="w-4 h-4 mr-1" />
+                                            <RefreshCw className="w-3.5 h-3.5" />
                                             Clear
-                                        </Button>
+                                        </button>
                                     </>
                                 )}
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            {items.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>No items added yet</p>
-                                    <p className="text-sm mt-1">Add items to start the sale</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-start justify-between p-3 bg-gray-50 rounded-lg"
-                                        >
-                                            <div className="flex-1 space-y-3">
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">{item.name}</p>
-                                                        {item.barcode && (
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Barcode: {item.barcode}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-semibold text-gray-900">
-                                                            ₹{((item.quantity * item.price) - (item.discount || 0)).toFixed(2)}
-                                                        </p>
-                                                        {(item.discount || 0) > 0 && (
-                                                            <p className="text-xs text-red-500 line-through">
-                                                                ₹{(item.quantity * item.price).toFixed(2)}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
+                        </div>
 
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Label className="text-xs text-gray-500">Qty:</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.quantity}
-                                                            onChange={(e) => handleUpdateItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                                                            className="h-7 w-16 text-xs"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Label className="text-xs text-gray-500">Price (₹):</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={item.price}
-                                                            onChange={(e) => handleUpdateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="h-7 w-24 text-xs"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Item Discount Controls */}
-                                                <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
-                                                    <span className="text-xs text-gray-500 w-16">Discount:</span>
-                                                    <div className="flex flex-1 gap-1">
-                                                        <div className="flex rounded-md shadow-sm">
-                                                            <button
-                                                                onClick={() => handleUpdateItemDiscount(item.id, 'flat', item.discountValue || 0)}
-                                                                className={`px-2 py-1 text-xs font-medium border rounded-l-md ${item.discountType === 'flat' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                                                            >
-                                                                ₹
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleUpdateItemDiscount(item.id, 'percent', item.discountValue || 0)}
-                                                                className={`px-2 py-1 text-xs font-medium border-t border-b border-r rounded-r-md ${item.discountType === 'percent' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                                                            >
-                                                                %
-                                                            </button>
-                                                        </div>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step={item.discountType === 'percent' ? "0.1" : "0.01"}
-                                                            className="h-7 text-xs w-20"
-                                                            value={item.discountValue || ''}
-                                                            onChange={(e) => handleUpdateItemDiscount(item.id, item.discountType || 'flat', parseFloat(e.target.value) || 0)}
-                                                            placeholder={item.discountType === 'percent' ? "%" : "Amount"}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRemoveItem(item.id)}
-                                                className="w-8 h-8 rounded-lg hover:bg-red-100 flex items-center justify-center transition-colors ml-4 self-start"
-                                            >
-                                                <Trash2 className="w-4 h-4 text-red-600" />
-                                            </button>
+                        {/* Cart body */}
+                        {items.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400">
+                                <p className="text-sm">Cart is empty</p>
+                                <p className="text-xs mt-1">Search and add items above</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {items.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-gray-900 text-sm truncate">{item.name}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">₹{item.price.toFixed(2)} each</p>
                                         </div>
-                                    ))}
+                                        {/* Qty stepper */}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity - 1)}
+                                                className="w-7 h-7 rounded-lg bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 flex items-center justify-center transition-colors text-base"
+                                            >−</button>
+                                            <span className="w-7 text-center font-semibold text-gray-900 text-sm">{item.quantity}</span>
+                                            <button
+                                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 1)}
+                                                className="w-7 h-7 rounded-lg bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 flex items-center justify-center transition-colors text-base"
+                                            >+</button>
+                                        </div>
+                                        <div className="text-right shrink-0 w-20">
+                                            <p className="font-semibold text-gray-900 text-sm">
+                                                ₹{((item.quantity * item.price) - (item.discount || 0)).toFixed(2)}
+                                            </p>
+                                            {(item.discount || 0) > 0 && (
+                                                <p className="text-xs text-emerald-600">−₹{(item.discount || 0).toFixed(2)}</p>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveItem(item.id)}
+                                            className="w-7 h-7 rounded-lg hover:bg-red-100 flex items-center justify-center transition-colors shrink-0"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Cart subtotal (visible on mobile, below cart) */}
+                        {items.length > 0 && (
+                            <div className="border-t border-gray-100 px-4 py-3 flex justify-between items-center bg-gray-50 lg:hidden">
+                                <span className="text-sm text-gray-600">Subtotal</span>
+                                <span className="font-bold text-gray-900">₹{subtotal.toFixed(2)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── RIGHT COLUMN ── Payment + Options ── */}
+                <div className="space-y-4">
+
+                    {/* Customer Section (collapsible) */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                        <button
+                            onClick={() => setIsCustomerSectionOpen(o => !o)}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 text-sm">Customer</span>
+                                <span className="text-xs text-gray-400">(optional)</span>
+                                {customerName && (
+                                    <span className="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full font-medium">{customerName}</span>
+                                )}
+                                {isLookingUpCustomer && (
+                                    <span className="text-xs text-blue-500">Looking up...</span>
+                                )}
+                            </div>
+                            <span className="text-gray-400 text-lg leading-none">{isCustomerSectionOpen ? "−" : "+"}</span>
+                        </button>
+
+                        {isCustomerSectionOpen && (
+                            <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                                    <Input
+                                        type="tel"
+                                        value={customerPhone}
+                                        onChange={(e) => handlePhoneChange(e.target.value)}
+                                        placeholder="Enter phone to auto-fill"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                                    <Input
+                                        value={customerName}
+                                        onChange={(e) => setCustomerName(e.target.value)}
+                                        placeholder="Leave blank for Walk-in"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Special Instructions (restaurant only, collapsible) */}
+                    {isRestaurantOrder && (
+                        <div className="bg-white border border-orange-100 rounded-2xl shadow-sm overflow-hidden">
+                            <button
+                                onClick={() => setIsSpecialInstructionsOpen(o => !o)}
+                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-orange-700">Special Instructions</span>
+                                    <span className="text-xs text-gray-400">(optional)</span>
+                                    {specialInstructions && (
+                                        <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-medium truncate max-w-[100px]">{specialInstructions}</span>
+                                    )}
+                                </div>
+                                <span className="text-gray-400 text-lg leading-none">{isSpecialInstructionsOpen ? "−" : "+"}</span>
+                            </button>
+                            {isSpecialInstructionsOpen && (
+                                <div className="px-4 pb-4 border-t border-orange-100 pt-3">
+                                    <Textarea
+                                        value={specialInstructions}
+                                        onChange={(e) => setSpecialInstructions(e.target.value)}
+                                        placeholder="E.g., No peanuts, Extra sauce, Mild spice..."
+                                        rows={2}
+                                        className="resize-none text-sm"
+                                    />
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    )}
 
-                    {/* Advanced Pricing Controls */}
-                    <Card className="border border-gray-200 bg-gray-50">
-                        <CardContent className="p-6">
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-sm text-gray-600">Cart Discount</Label>
+                    {/* Print Options */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 space-y-3">
+                        {/* Print toggles */}
+                        <div className="flex gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer flex-1 p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={printReceiptEnabled}
+                                    onChange={(e) => setPrintReceiptEnabled(e.target.checked)}
+                                    className="w-4 h-4 accent-purple-600 rounded"
+                                />
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Printer className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                                    <span className="text-xs font-medium text-gray-700 truncate">Print Receipt</span>
+                                </div>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer flex-1 p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={printTokenEnabled}
+                                    onChange={(e) => setPrintTokenEnabled(e.target.checked)}
+                                    className="w-4 h-4 accent-orange-500 rounded"
+                                />
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Printer className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                                    <span className="text-xs font-medium text-gray-700 truncate">Print Token</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Pricing summary + discount + tax */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+
+                        {/* Discount & Tax (collapsible) */}
+                        <button
+                            onClick={() => setIsDiscountOpen(o => !o)}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">Discount & Tax</span>
+                                {(cartDiscountValue > 0 || taxRate > 0) && (
+                                    <span className="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
+                                        {cartDiscountValue > 0 && `−${cartDiscountType === 'percent' ? cartDiscountValue + '%' : '₹' + cartDiscountValue}`}
+                                        {cartDiscountValue > 0 && taxRate > 0 && ' · '}
+                                        {taxRate > 0 && `GST ${taxRate}%`}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-gray-400 text-lg leading-none">{isDiscountOpen ? "−" : "+"}</span>
+                        </button>
+
+                        {isDiscountOpen && (
+                            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Cart Discount</label>
                                         <div className="flex gap-1">
-                                            <div className="flex rounded-md shadow-sm">
+                                            <div className="flex rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                                                 <button
                                                     onClick={() => setCartDiscountType('flat')}
-                                                    className={`px-3 py-1.5 text-sm font-medium border rounded-l-md ${cartDiscountType === 'flat' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                                                >
-                                                    ₹
-                                                </button>
+                                                    className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${cartDiscountType === 'flat' ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                                                >₹</button>
                                                 <button
                                                     onClick={() => setCartDiscountType('percent')}
-                                                    className={`px-3 py-1.5 text-sm font-medium border-t border-b border-r rounded-r-md ${cartDiscountType === 'percent' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-                                                >
-                                                    %
-                                                </button>
+                                                    className={`px-2.5 py-1.5 text-xs font-semibold border-l border-gray-200 transition-colors ${cartDiscountType === 'percent' ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                                                >%</button>
                                             </div>
                                             <Input
                                                 type="number"
                                                 min="0"
-                                                className="flex-1"
+                                                className="flex-1 min-w-0"
                                                 value={cartDiscountValue || ''}
                                                 onChange={(e) => setCartDiscountValue(parseFloat(e.target.value) || 0)}
-                                                placeholder={cartDiscountType === 'percent' ? "%" : "Amount"}
+                                                placeholder={cartDiscountType === 'percent' ? "%" : "Amt"}
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-sm text-gray-600">Tax Options</Label>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Tax</label>
                                         <select
-                                            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                                             value={taxRate}
                                             onChange={(e) => setTaxRate(parseFloat(e.target.value))}
                                         >
-                                            <option value="0">No Tax (0%)</option>
+                                            <option value="0">No Tax</option>
                                             <option value="5">GST 5%</option>
                                             <option value="12">GST 12%</option>
                                             <option value="18">GST 18%</option>
@@ -1312,151 +1254,114 @@ export function SalesPage() {
                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            <div className="space-y-3 mt-6">
+                        <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Subtotal</span>
+                                <span className="font-medium text-gray-900">₹{subtotal.toFixed(2)}</span>
+                            </div>
+                            {totalDiscount > 0 && (
+                                <div className="flex justify-between text-sm text-emerald-600">
+                                    <span>Discount</span>
+                                    <span className="font-medium">−₹{totalDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
+                            {taxAmount > 0 && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Subtotal</span>
-                                    <span className="text-gray-900 font-medium">₹{subtotal.toFixed(2)}</span>
+                                    <span className="text-gray-500">Tax ({taxRate}%)</span>
+                                    <span className="font-medium text-gray-900">+₹{taxAmount.toFixed(2)}</span>
                                 </div>
-
-                                {totalDiscount > 0 && (
-                                    <div className="flex justify-between text-sm text-green-600">
-                                        <span>Discount</span>
-                                        <span className="font-medium">-₹{totalDiscount.toFixed(2)}</span>
+                            )}
+                            {customerPointsBalance > 0 && (
+                                <div className="pt-2 border-t border-gray-100">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label htmlFor="pointsUsed" className="flex items-center gap-1.5 text-sm text-indigo-700 font-medium">
+                                            <Star className="w-4 h-4 fill-indigo-500 text-indigo-500" />
+                                            Use Points
+                                        </label>
+                                        <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                            {customerPointsBalance} pts
+                                        </span>
                                     </div>
-                                )}
-
-                                {taxAmount > 0 && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Tax ({taxRate}%)</span>
-                                        <span className="text-gray-900 font-medium">+₹{taxAmount.toFixed(2)}</span>
-                                    </div>
-                                )}
-
-                                {customerPointsBalance > 0 && (
-                                    <div className="pt-4 border-t border-gray-100">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <Label htmlFor="pointsUsed" className="flex items-center gap-2 text-indigo-700">
-                                                <Star className="w-4 h-4 fill-indigo-700" />
-                                                Use Points
-                                            </Label>
-                                            <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                                                Balance: {customerPointsBalance} pts
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center">
-                                            <Input
-                                                id="pointsUsed"
-                                                type="number"
-                                                min="0"
-                                                max={maxPointsUsable}
-                                                value={pointsToUse}
-                                                onChange={(e) => setPointsToUse(Math.min(parseInt(e.target.value) || 0, maxPointsUsable))}
-                                                className="w-24 border-indigo-200"
-                                            />
-                                            <span className="text-sm text-gray-500">
-                                                = -₹{actualPointsUsed.toFixed(2)}
-                                            </span>
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                className="ml-auto text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-                                                onClick={() => setPointsToUse(maxPointsUsable)}
-                                            >
-                                                Use Max
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="border-t border-gray-300 pt-3">
-                                    <div className="flex justify-between">
-                                        <span className="font-semibold text-gray-900">Total</span>
-                                        <div className="text-right">
-                                            <span className="text-2xl font-semibold text-gray-900 block">
-                                                ₹{grandTotal.toFixed(2)}
-                                            </span>
-                                            <span className="text-xs text-gray-500">Earns {Math.floor(grandTotal / 100)} Points</span>
-                                        </div>
+                                    <div className="flex gap-2 items-center">
+                                        <Input
+                                            id="pointsUsed"
+                                            type="number"
+                                            min="0"
+                                            max={maxPointsUsable}
+                                            value={pointsToUse}
+                                            onChange={(e) => setPointsToUse(Math.min(parseInt(e.target.value) || 0, maxPointsUsable))}
+                                            className="w-24 border-indigo-200"
+                                        />
+                                        <span className="text-sm text-gray-500">= −₹{actualPointsUsed.toFixed(2)}</span>
+                                        <Button variant="secondary" size="sm" className="ml-auto text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200" onClick={() => setPointsToUse(maxPointsUsable)}>
+                                            Max
+                                        </Button>
                                     </div>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 space-y-3">
+                        <h3 className="text-sm font-semibold text-gray-900">Payment Method</h3>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button
+                                onClick={() => setPaymentMethod('cash')}
+                                className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 transition-colors ${paymentMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                <Banknote className="w-5 h-5 mb-1" />
+                                <span className="text-xs font-semibold">Cash</span>
+                            </button>
+                            <button
+                                onClick={() => setPaymentMethod('upi')}
+                                className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 transition-colors ${paymentMethod === 'upi' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                <Smartphone className="w-5 h-5 mb-1" />
+                                <span className="text-xs font-semibold">UPI</span>
+                            </button>
+                            <button
+                                onClick={() => setPaymentMethod('card')}
+                                className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 transition-colors ${paymentMethod === 'card' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                <CreditCard className="w-5 h-5 mb-1" />
+                                <span className="text-xs font-semibold">Card</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Grand Total + Charge button */}
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 space-y-4">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <p className="text-xs text-gray-500 mb-0.5">Grand Total</p>
+                                <p className="text-3xl font-bold text-gray-900">₹{grandTotal.toFixed(2)}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">Earns {Math.floor(grandTotal / 100)} Points</p>
                             </div>
-
-                            {/* Payment Method */}
-                            <div className="mt-6 pt-6 border-t border-gray-300">
-                                <Label className="text-sm font-semibold text-gray-900 mb-3 block">Payment Method</Label>
-                                <div className="grid grid-cols-4 gap-2">
-                                    <button
-                                        onClick={() => setPaymentMethod('cash')}
-                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border-2 transition-colors ${paymentMethod === 'cash' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <Banknote className="w-5 h-5 mb-1" />
-                                        <span className="text-xs font-medium">Cash</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('upi')}
-                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border-2 transition-colors ${paymentMethod === 'upi' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <Smartphone className="w-5 h-5 mb-1" />
-                                        <span className="text-xs font-medium">UPI</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('card')}
-                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border-2 transition-colors ${paymentMethod === 'card' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <CreditCard className="w-5 h-5 mb-1" />
-                                        <span className="text-xs font-medium">Card</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('split')}
-                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border-2 transition-colors ${paymentMethod === 'split' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        <div className="flex mb-1">
-                                            <Banknote className="w-3 h-3 -mr-1" />
-                                            <CreditCard className="w-3 h-3 mt-1" />
-                                        </div>
-                                        <span className="text-xs font-medium">Split</span>
-                                    </button>
+                            {totalDiscount > 0 && (
+                                <div className="text-right">
+                                    <p className="text-xs text-gray-400 line-through">₹{(grandTotal + totalDiscount).toFixed(2)}</p>
+                                    <p className="text-xs text-emerald-600 font-medium">Saved ₹{totalDiscount.toFixed(2)}</p>
                                 </div>
+                            )}
+                        </div>
 
-                                {paymentMethod === 'split' && (
-                                    <div className="mt-4 p-3 bg-white border border-gray-200 rounded-lg space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <Label className="w-16 text-xs">Cash ₹</Label>
-                                            <Input type="number" min="0" className="h-8 flex-1" value={paymentDetails.cash || ''} onChange={(e) => setPaymentDetails({ ...paymentDetails, cash: parseFloat(e.target.value) || 0 })} />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Label className="w-16 text-xs">UPI ₹</Label>
-                                            <Input type="number" min="0" className="h-8 flex-1" value={paymentDetails.upi || ''} onChange={(e) => setPaymentDetails({ ...paymentDetails, upi: parseFloat(e.target.value) || 0 })} />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Label className="w-16 text-xs">Card ₹</Label>
-                                            <Input type="number" min="0" className="h-8 flex-1" value={paymentDetails.card || ''} onChange={(e) => setPaymentDetails({ ...paymentDetails, card: parseFloat(e.target.value) || 0 })} />
-                                        </div>
-                                        <div className="text-xs text-right text-gray-500 font-medium">
-                                            Total: ₹{((paymentDetails.cash || 0) + (paymentDetails.upi || 0) + (paymentDetails.card || 0)).toFixed(2)} / ₹{grandTotal.toFixed(2)}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Complete Sale Button */}
-                    <div className="space-y-4">
-                        <Button
+                        <button
                             onClick={handleCompleteSale}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
+                            className="w-full py-4 rounded-xl text-white font-bold text-lg flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80"
+                            style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
                         >
-                            Complete Sale <span className="text-xs text-green-200 ml-2 font-normal">(F4)</span>
-                        </Button>
+                            <IndianRupee className="w-5 h-5" />
+                            Charge ₹{grandTotal.toFixed(2)}
+                            <span className="text-xs text-purple-200 font-normal ml-1">(F4)</span>
+                        </button>
 
-                        <div className="flex justify-center gap-4 text-xs text-gray-500 pt-2 pb-4">
-                            <span className="flex items-center gap-1"><Keyboard className="w-3 h-3" /> Shortcuts:</span>
-                            <span><kbd className="bg-gray-100 px-1 rounded border border-gray-200">F2</kbd> Search</span>
-                            <span><kbd className="bg-gray-100 px-1 rounded border border-gray-200">F4</kbd> Complete</span>
-                            <span><kbd className="bg-gray-100 px-1 rounded border border-gray-200">Ctrl+H</kbd> Hold</span>
-                            <span><kbd className="bg-gray-100 px-1 rounded border border-gray-200">Esc</kbd> Close</span>
+                        <div className="flex justify-center gap-4 text-xs text-gray-400 pt-1">
+                            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">F2</kbd> Search</span>
+                            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">F4</kbd> Charge</span>
+                            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 text-gray-500">Ctrl+H</kbd> Hold</span>
                         </div>
                     </div>
                 </div>

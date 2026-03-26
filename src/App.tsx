@@ -39,6 +39,19 @@ import {
   CustomersPage,
 } from "./pages";
 
+function RootRoute() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (user) return <Navigate to="/app" replace />;
+  return <LandingPage />;
+}
+
 function RoleRedirect() {
   const { user, profile, isLoading, error, signOut, activeBusinessAccount, businessAccounts } = useAuth();
   const [showBusinessSetup, setShowBusinessSetup] = useState(false);
@@ -106,8 +119,8 @@ export default function App() {
       <InventoryProvider>
         <HashRouter>
           <Routes>
-            {/* Public landing */}
-            <Route path="/" element={<LandingPage />} />
+            {/* Root: redirect logged-in users to dashboard, show landing to guests */}
+            <Route path="/" element={<RootRoute />} />
 
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />

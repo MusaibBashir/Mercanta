@@ -7,7 +7,7 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, X, Check, Flame, Leaf, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Check, Flame, Leaf, Search, FolderMinus } from "lucide-react";
 import { PageContainer } from "../components/layout/PageContainer";
 
 interface MenuItem {
@@ -79,18 +79,61 @@ export function RestaurantMenuPage() {
 
       if (catsError) throw catsError;
 
-      setMenuItems(items || []);
-      setCategories(cats || []);
+      const allItems: MenuItem[] = items || [];
+      setMenuItems(allItems);
+
+      // Merge registered categories with any categories found in menu items
+      // (items may have categories not yet added to menu_categories table)
+      const registeredCats: MenuCategory[] = cats || [];
+      const registeredNames = new Set(registeredCats.map((c) => c.category_name));
+      const extraCats: MenuCategory[] = [...new Set(allItems.map((i) => i.category))]
+        .filter((name) => name && !registeredNames.has(name))
+        .map((name) => ({
+          id: name, // use name as stable key for unregistered cats
+          category_name: name,
+          item_count: allItems.filter((i) => i.category === name).length,
+        }));
+      const mergedCats = [...registeredCats, ...extraCats];
+      setCategories(mergedCats);
 
       // Initialize first category
-      if (cats && cats.length > 0) {
-        setSelectedCategory(cats[0].category_name);
+      if (mergedCats.length > 0) {
+        setSelectedCategory(mergedCats[0].category_name);
       }
     } catch (error) {
       console.error("Error fetching menu:", error);
       toast.error("Failed to load menu");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: MenuCategory) => {
+    const itemCount = menuItems.filter((i) => i.category === category.category_name).length;
+    const message = itemCount > 0
+      ? `Delete "${category.category_name}"? It has ${itemCount} item(s) — they will remain but appear under an unregistered category.`
+      : `Delete category "${category.category_name}"?`;
+    if (!window.confirm(message)) return;
+
+    // Only registered categories (with a real UUID id) exist in menu_categories
+    const isRegistered = category.id !== category.category_name;
+    if (!isRegistered) {
+      toast.error("This category is not registered in the database — no record to delete.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase!
+        .from("menu_categories")
+        .delete()
+        .eq("id", category.id);
+      if (error) throw error;
+      toast.success(`Category "${category.category_name}" deleted`);
+      if (selectedCategory === category.category_name) setSelectedCategory("All");
+      fetchMenuData();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast.error("Failed to delete category");
     }
   };
 
@@ -310,17 +353,28 @@ export function RestaurantMenuPage() {
                   All Items ({menuItems.length})
                 </button>
                 {categories.map((category) => (
-                  <button
+                  <div
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.category_name)}
-                    className={`w-full text-left px-3 py-2 rounded transition ${
+                    className={`flex items-center gap-1 rounded transition ${
                       selectedCategory === category.category_name
-                        ? "bg-green-100 text-green-800 font-medium"
+                        ? "bg-green-100 text-green-800"
                         : "hover:bg-gray-100"
                     }`}
                   >
-                    {category.category_name} ({category.item_count})
-                  </button>
+                    <button
+                      onClick={() => setSelectedCategory(category.category_name)}
+                      className="flex-1 text-left px-3 py-2 text-sm font-medium"
+                    >
+                      {category.category_name} ({category.item_count})
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(category)}
+                      className="p-1.5 mr-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors shrink-0"
+                      title="Delete category"
+                    >
+                      <FolderMinus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
               </CardContent>
             </Card>

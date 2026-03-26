@@ -26,7 +26,7 @@ export interface BusinessAccount {
     id: string;
     owner_id: string;
     business_name: string;
-    business_type: "standalone_shop" | "franchise_admin" | "franchise_unit";
+    business_type: "standalone_shop" | "franchise_admin" | "franchise_unit" | "restaurant";
     display_name?: string;
     logo_url?: string;
     settings?: Record<string, any>;
