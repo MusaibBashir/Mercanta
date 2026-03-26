@@ -148,8 +148,40 @@ export function FranchiseDashboard() {
 
     // Fetch last 5 sales directly from DB
     const [recentSalesDB, setRecentSalesDB] = useState<any[]>([]);
+
+    // Fetch today's stats directly from DB (bypasses stale context)
+    const [todayStatsDB, setTodayStatsDB] = useState({ orders: 0, revenue: 0, pending: 0 });
+
+    const fetchTodayStats = async () => {
+        if (!activeBusinessAccount?.id) return;
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const [salesRes, pendingRes] = await Promise.all([
+            supabase!
+                .from('sales')
+                .select('total')
+                .eq('business_account_id', activeBusinessAccount.id)
+                .gte('date', todayStart.toISOString()),
+            supabase!
+                .from('order_tokens')
+                .select('id', { count: 'exact', head: true })
+                .eq('business_account_id', activeBusinessAccount.id)
+                .eq('is_active', true)
+                .in('status', ['ordered', 'confirmed', 'preparing']),
+        ]);
+
+        const todaySales = salesRes.data || [];
+        setTodayStatsDB({
+            orders: todaySales.length,
+            revenue: todaySales.reduce((sum: number, s: any) => sum + parseFloat(s.total), 0),
+            pending: pendingRes.count ?? 0,
+        });
+    };
+
     useEffect(() => {
         if (!activeBusinessAccount?.id) return;
+        // Initial fetch
         supabase!
             .from('sales')
             .select('id, date, customer_name, customer_phone, total, payment_method, sale_items(item_name, quantity)')
@@ -160,6 +192,11 @@ export function FranchiseDashboard() {
                 if (data) setRecentSalesDB(data);
                 if (error) console.error('Recent sales fetch error:', error);
             });
+        fetchTodayStats();
+
+        // Refresh every 30 seconds so KDS status changes + new sales reflect
+        const interval = setInterval(fetchTodayStats, 30_000);
+        return () => clearInterval(interval);
     }, [activeBusinessAccount?.id]);
 
     return (
@@ -197,9 +234,9 @@ export function FranchiseDashboard() {
                             <p className="text-base font-black uppercase tracking-wide text-gray-900 mb-1">Orders Summary</p>
                             <div className="border-b border-gray-300 mb-4" />
                             {[
-                                { label: "Orders Processed", value: analytics.todaySales.length },
-                                { label: "Orders Pending/In Process", value: 0 },
-                                { label: "Revenue Generated", value: `₹${analytics.todayRevenue.toFixed(0)}` },
+                                { label: "Orders Processed", value: todayStatsDB.orders },
+                                { label: "Orders Pending/In Process", value: todayStatsDB.pending },
+                                { label: "Revenue Generated", value: `₹${todayStatsDB.revenue.toFixed(0)}` },
                             ].map((row, i) => (
                                 <div key={i} className="flex items-center gap-4 mb-3 last:mb-0">
                                     <div
@@ -311,8 +348,8 @@ export function FranchiseDashboard() {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className="text-xs font-semibold text-purple-200 uppercase tracking-wider">Today's Revenue</p>
-                                    <p className="text-3xl font-bold mt-1">₹{analytics.todayRevenue.toFixed(0)}</p>
-                                    <p className="text-sm mt-1.5 font-medium text-purple-200">{analytics.todaySales.length} sales today</p>
+                                    <p className="text-3xl font-bold mt-1">₹{todayStatsDB.revenue.toFixed(0)}</p>
+                                    <p className="text-sm mt-1.5 font-medium text-purple-200">{todayStatsDB.orders} sales today</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
                                     <TrendingUp className="w-4 h-4 text-white" />
