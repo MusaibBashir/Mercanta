@@ -134,14 +134,14 @@ export function KitchenDisplaySystem() {
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'ordered': return 'bg-blue-100 text-blue-800';
-      case 'confirmed': return 'bg-blue-50 text-blue-700';
-      case 'preparing': return 'bg-orange-100 text-orange-800';
-      case 'prepared': return 'bg-yellow-100 text-yellow-800';
-      case 'ready': return 'bg-green-100 text-green-800';
-      case 'served': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'ordered':   return 'bg-slate-800 text-white border-l-4 border-blue-400';
+      case 'confirmed': return 'bg-slate-800 text-white border-l-4 border-blue-400';
+      case 'preparing': return 'bg-orange-700 text-white border-l-4 border-orange-300';
+      case 'prepared':  return 'bg-amber-600 text-white border-l-4 border-yellow-300';
+      case 'ready':     return 'bg-emerald-700 text-white border-l-4 border-emerald-300';
+      case 'served':    return 'bg-slate-700 text-gray-300 border-l-4 border-slate-500';
+      case 'cancelled': return 'bg-red-900 text-red-200 border-l-4 border-red-400';
+      default:          return 'bg-slate-800 text-white border-l-4 border-slate-500';
     }
   };
 
@@ -216,13 +216,13 @@ export function KitchenDisplaySystem() {
             <div className="text-5xl font-bold mb-2">#{token.token_number}</div>
 
             {/* Wait Time */}
-            <div className="text-xs font-semibold mb-2">
+            <div className="text-xs font-semibold mb-2 text-white/70">
               Wait: {calculateWaitTime(token.created_at)} min
             </div>
 
             {/* Status */}
             <div className="mb-3">
-              <Badge className="text-sm">
+              <Badge className="text-xs font-bold bg-black/30 text-white border-0 flex items-center gap-1 w-fit">
                 {getStatusIcon(token.status)}
                 {token.status.toUpperCase()}
               </Badge>
@@ -238,7 +238,7 @@ export function KitchenDisplaySystem() {
                     <span>{isWA ? 'WhatsApp Order' : (token.customer_name || 'Order')}</span>
                   </div>
                   {isWA && token.customer_phone && (
-                    <div className="text-xs text-green-700 font-medium mt-0.5">
+                    <div className="text-xs text-green-300 font-medium mt-0.5">
                       📱 +91 {token.customer_phone}
                     </div>
                   )}
@@ -247,13 +247,13 @@ export function KitchenDisplaySystem() {
             })()}
 
             {/* Order Items */}
-            <div className="text-xs mb-3 line-clamp-3">
+            <div className="text-xs mb-3 line-clamp-3 text-white/90 leading-relaxed">
               {token.order_items}
             </div>
 
             {/* Notes */}
             {token.notes && token.notes !== 'WhatsApp order' && (
-              <div className="text-xs italic mb-3 bg-black bg-opacity-20 p-2 rounded">
+              <div className="text-xs italic mb-3 bg-black/30 text-white/80 p-2 rounded">
                 {token.notes}
               </div>
             )}
