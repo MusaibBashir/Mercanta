@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useAuth, Franchise } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../lib/supabaseClient";
 import { useInventory } from "../../context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -11,14 +12,10 @@ import {
 } from "recharts";
 import {
     Store, TrendingUp, Package, IndianRupee, ShoppingCart,
-    Users, AlertCircle, LogOut, MapPin, Truck, BarChart3, Settings
+    Users, AlertCircle, LogOut, Truck, BarChart3
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDashboardSettings } from "../../hooks/useDashboardSettings";
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuLabel,
-    DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuTrigger
-} from "../../components/ui/dropdown-menu";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -52,8 +49,19 @@ const tooltipStyle = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function FranchiseDashboard() {
-    const { profile, franchise, signOut } = useAuth();
+    const { profile, franchise, signOut, activeBusinessAccount } = useAuth();
     const { salesHistory, inventory, getLowStockItems } = useInventory();
+    const isRestaurant = activeBusinessAccount?.business_type === "restaurant";
+
+    // Track whether we're on a phone viewport (<640px) reactively
+    const [isPhone, setIsPhone] = useState(() =>
+        typeof window !== "undefined" && window.innerWidth < 640
+    );
+    useEffect(() => {
+        const handler = () => setIsPhone(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
 
     const { settings, toggleSetting } = useDashboardSettings('franchise', {
         showActionStrip: true,
@@ -138,6 +146,21 @@ export function FranchiseDashboard() {
         toast.success("Signed out");
     };
 
+    // Fetch last 5 sales directly from DB
+    const [recentSalesDB, setRecentSalesDB] = useState<any[]>([]);
+    useEffect(() => {
+        if (!activeBusinessAccount?.id) return;
+        supabase
+            .from('sales')
+            .select('id, date, customer_name, total, payment_method, sale_items(item_name, quantity), order_tokens(token_number)')
+            .eq('business_account_id', activeBusinessAccount.id)
+            .order('date', { ascending: false })
+            .limit(5)
+            .then(({ data }) => {
+                if (data) setRecentSalesDB(data);
+            });
+    }, [activeBusinessAccount?.id]);
+
     return (
         <div className="min-h-screen page-bg font-inter pb-12">
             <div className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 page-enter">
@@ -150,53 +173,108 @@ export function FranchiseDashboard() {
                             <h1 className="flex items-center gap-3">
                                 <img src="/logo-transparent.png" className="h-16 w-auto object-contain" alt="Mercanta Logo" />
                                 <span className="text-gray-300 font-light hidden sm:inline ml-2">|</span>
-                                <span className="text-2xl hidden sm:inline ml-2 font-semibold">{franchise?.name || "My Franchise"}</span>
+                                <span className="text-2xl hidden sm:inline ml-2 font-semibold">{activeBusinessAccount?.display_name || activeBusinessAccount?.business_name || franchise?.name}</span>
                             </h1>
-                            <p className="text-sm text-gray-500 mt-1 font-medium flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5" />
-                                {franchise?.region}, {franchise?.state} · Logged in as {profile?.full_name}
-                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link to="/sales">
-                            <Button className="gap-2 text-sm shadow-md" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}>
-                                <ShoppingCart className="w-4 h-4" /> New Sale
-                            </Button>
-                        </Link>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon" className="border-gray-300">
-                                    <Settings className="w-4 h-4 text-gray-600" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem checked={settings.showActionStrip} onCheckedChange={() => toggleSetting('showActionStrip')}>
-                                    Quick Actions
-                                </DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={settings.showKpis} onCheckedChange={() => toggleSetting('showKpis')}>
-                                    Core KPIs
-                                </DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={settings.showStorePerformance} onCheckedChange={() => toggleSetting('showStorePerformance')}>
-                                    Store Performance
-                                </DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={settings.showBestsellers} onCheckedChange={() => toggleSetting('showBestsellers')}>
-                                    Bestsellers
-                                </DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={settings.showRecentTransactions} onCheckedChange={() => toggleSetting('showRecentTransactions')}>
-                                    Recent Transactions
-                                </DropdownMenuCheckboxItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
                         <Button variant="ghost" onClick={handleSignOut} className="gap-2 text-gray-600 text-sm">
                             <LogOut className="w-4 h-4" /> Sign Out
                         </Button>
                     </div>
                 </div>
+
+                {/* ── Mobile Restaurant Quick Panel ── */}
+                {isRestaurant && (
+                <div className="block sm:hidden -mx-4 min-h-screen bg-white">
+
+
+                    <div className="px-5 space-y-5 pb-8">
+
+                        {/* Orders Summary Card */}
+                        <div className="rounded-2xl p-5" style={{ backgroundColor: "#fef9e7", border: "1px solid #f5e6a0" }}>
+                            <p className="text-base font-black uppercase tracking-wide text-gray-900 mb-1">Orders Summary</p>
+                            <div className="border-b border-gray-300 mb-4" />
+                            {[
+                                { label: "Orders Processed", value: analytics.todaySales.length },
+                                { label: "Orders Pending/In Process", value: 0 },
+                                { label: "Revenue Generated", value: `₹${analytics.todayRevenue.toFixed(0)}` },
+                            ].map((row, i) => (
+                                <div key={i} className="flex items-center gap-4 mb-3 last:mb-0">
+                                    <div
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                                        style={{ backgroundColor: "#c4b5fd" }}
+                                    >
+                                        <span className="text-sm font-bold text-white">{row.value}</span>
+                                    </div>
+                                    <span className="text-sm text-gray-700 font-medium">{row.label}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Action Buttons 2x2 */}
+                        <div className="grid grid-cols-2 gap-3">
+                            {([
+                                { to: "/sales",           label: "+ NEW ORDER",      bg: "#f25c6e" },
+                                { to: "/kitchen",         label: "KITCHEN\nDISPLAY", bg: "#f25c6e" },
+                                { to: "/menu",            label: "MENU",             bg: "#9b87c8" },
+                                { to: "/whatsapp-orders", label: "WHATSAPP\nORDERS", bg: "#9b87c8" },
+                            ] as const).map((btn) => (
+                                <Link key={btn.to} to={btn.to}>
+                                    <div
+                                        className="rounded-2xl flex items-center justify-center text-center active:scale-95 transition-transform cursor-pointer"
+                                        style={{ backgroundColor: btn.bg, minHeight: "90px", padding: "16px" }}
+                                    >
+                                        <span className="text-white font-black text-base uppercase leading-snug whitespace-pre-line">
+                                            {btn.label}
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+
+                        {/* Recent Orders */}
+                        <div>
+                            <p className="text-base font-black uppercase tracking-wide text-gray-900 mb-1">Recent Orders</p>
+                            <div className="border-b border-gray-300 mb-3" />
+                            <div className="grid grid-cols-4 gap-1 px-1 mb-2">
+                                {["Token", "QTY", "Amount", "Time"].map((h) => (
+                                    <span key={h} className="text-xs font-bold text-gray-500 uppercase text-center">{h}</span>
+                                ))}
+                            </div>
+                            {recentSalesDB.length === 0 ? (
+                                <p className="text-sm text-gray-400 text-center py-4">No sales yet</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {recentSalesDB.map((sale: any) => {
+                                        const totalQty = sale.sale_items?.reduce((s: number, it: any) => s + it.quantity, 0) ?? "-";
+                                        const saleTime = sale.date ? new Date(sale.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "-";
+                                        const tokenNum = sale.order_tokens?.[0]?.token_number ?? "-";
+                                        return (
+                                            <div key={sale.id} className="grid grid-cols-4 gap-1 px-1 py-2 rounded-lg bg-gray-50">
+                                                <span className="text-xs font-bold text-center text-gray-700">#{tokenNum}</span>
+                                                <span className="text-xs text-center text-gray-700">{totalQty}</span>
+                                                <span className="text-xs text-center text-gray-700">₹{sale.total?.toFixed(0)}</span>
+                                                <span className="text-xs text-center text-gray-600">{saleTime}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="border-t border-gray-200 mt-4 py-5 text-center px-5">
+                        <p className="text-xs text-gray-500">Mercanta · All rights reserved</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Powered by Mercanta POS · Contact: support@mercanta.in</p>
+                    </div>
+                </div>
+                )}
+
+
+                {/* ── Rest of dashboard (not rendered on mobile for restaurants) ── */}
+                {!(isRestaurant && isPhone) && (<div>
 
                 {/* ── Action Strip ── */}
                 {settings.showActionStrip && (
@@ -368,7 +446,7 @@ export function FranchiseDashboard() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                        {analytics.recentSales.length === 0 ? (
+                        {recentSalesDB.length === 0 ? (
                             <div className="h-[200px] flex flex-col items-center justify-center gap-3 text-sm text-gray-400">
                                 <ShoppingCart className="w-10 h-10 text-gray-200" />
                                 <p>No sales yet</p>
@@ -389,21 +467,20 @@ export function FranchiseDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {analytics.recentSales.map((sale: any) => (
+                                        {recentSalesDB.map((sale: any) => (
                                             <tr key={sale.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
                                                 <td className="px-5 py-3 text-sm text-gray-500">
                                                     {new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                                                 </td>
                                                 <td className="px-5 py-3">
-                                                    <p className="text-sm font-medium text-gray-900">{sale.customerName}</p>
-                                                    {sale.customerPhone && <p className="text-xs text-gray-400">{sale.customerPhone}</p>}
+                                                    <p className="text-sm font-medium text-gray-900">{sale.customer_name}</p>
                                                 </td>
                                                 <td className="px-5 py-3 text-sm text-gray-600">
-                                                    {sale.items?.length || 0} unique items
+                                                    {sale.sale_items?.length || 0} unique items
                                                 </td>
                                                 <td className="px-5 py-3">
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 uppercase">
-                                                        {sale.paymentMethod || 'CASH'}
+                                                        {sale.payment_method || 'CASH'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-sm font-bold text-gray-900 text-right">
@@ -418,6 +495,8 @@ export function FranchiseDashboard() {
                     </CardContent>
                 </Card>
                 )}
+
+                </div>)}{/* end restaurant-hidden wrapper */}
 
             </div>
         </div>
