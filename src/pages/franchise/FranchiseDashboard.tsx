@@ -184,7 +184,7 @@ export function FranchiseDashboard() {
         // Initial fetch
         supabase!
             .from('sales')
-            .select('id, date, customer_name, customer_phone, total, payment_method, sale_items(item_name, quantity)')
+            .select('id, date, customer_name, customer_phone, total, payment_method, sale_items(item_name, quantity), order_tokens!order_tokens_sale_id_fkey(token_number)')
             .eq('business_account_id', activeBusinessAccount.id)
             .order('date', { ascending: false })
             .limit(5)
@@ -287,7 +287,7 @@ export function FranchiseDashboard() {
                                     {recentSalesDB.map((sale: any, idx: number) => {
                                         const totalQty = sale.sale_items?.reduce((s: number, it: any) => s + it.quantity, 0) ?? "-";
                                         const saleTime = sale.date ? new Date(sale.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "-";
-                                        const tokenNum = idx + 1;
+                                        const tokenNum = sale.order_tokens?.[0]?.token_number ?? (idx + 1);
                                         return (
                                             <div key={sale.id} className="grid grid-cols-4 gap-1 px-1 py-2 rounded-lg bg-gray-50">
                                                 <span className="text-xs font-bold text-center text-gray-700">#{tokenNum}</span>
