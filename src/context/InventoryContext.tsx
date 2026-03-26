@@ -626,6 +626,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       if (authContext?.activeBusinessAccount?.id) {
         saleInsert.business_account_id = authContext.activeBusinessAccount.id;
       }
+      if (authContext?.activeBusinessAccount?.business_type === "restaurant") {
+        saleInsert.is_restaurant_order = true;
+      }
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
         .insert(saleInsert)

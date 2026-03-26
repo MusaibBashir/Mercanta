@@ -542,7 +542,7 @@ export function SalesPage() {
                 if (!success) throw new Error("DB record failed");
 
                 // Create token for restaurant orders in UPI/card flow
-                if (isRestaurantOrder && activeBusinessAccount && saleResult.saleId) {
+                if (activeBusinessAccount?.business_type === "restaurant" && activeBusinessAccount && saleResult.saleId) {
                     try {
                         const tokenResult = await createOrderToken({
                             sale_id: saleResult.saleId,
@@ -552,7 +552,7 @@ export function SalesPage() {
                             notes: specialInstructions,
                             is_restaurant_order: true
                         });
-                        if (tokenResult.success) {
+                        if (tokenResult.success && tokenResult.data) {
                             const itemsStr = items.map(item => `${item.name} x${item.quantity}`).join("\n");
                             if (printTokenEnabled) {
                                 printTokenReceipt(
@@ -564,9 +564,12 @@ export function SalesPage() {
                                 );
                             }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
+                        } else if (!tokenResult.success) {
+                            toast.error(`Token creation failed: ${tokenResult.error}`);
                         }
                     } catch (error) {
                         console.error("Token creation error:", error);
+                        toast.error("Failed to create order token");
                     }
                 }
                 return;
@@ -574,7 +577,7 @@ export function SalesPage() {
 
             if (success) {
                 // Feature 2: Create token for restaurant orders
-                if (isRestaurantOrder && activeBusinessAccount && saleResult.saleId) {
+                if (activeBusinessAccount?.business_type === "restaurant" && activeBusinessAccount && saleResult.saleId) {
                     try {
                         const tokenResult = await createOrderToken({
                             sale_id: saleResult.saleId,
@@ -585,7 +588,7 @@ export function SalesPage() {
                             is_restaurant_order: true
                         });
 
-                        if (tokenResult.success) {
+                        if (tokenResult.success && tokenResult.data) {
                             // Print token receipt if enabled
                             const itemsStr = items.map(item => `${item.name} x${item.quantity}`).join("\n");
                             if (printTokenEnabled) {
@@ -598,12 +601,12 @@ export function SalesPage() {
                                 );
                             }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
-                        } else {
-                            console.error("Token creation failed:", tokenResult.error);
+                        } else if (!tokenResult.success) {
+                            toast.error(`Token creation failed: ${tokenResult.error}`);
                         }
                     } catch (error) {
                         console.error("Token creation error:", error);
-                        // Don't fail the sale if token creation fails
+                        toast.error("Failed to create order token");
                     }
                 }
 
