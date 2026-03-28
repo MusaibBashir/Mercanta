@@ -1,0 +1,75 @@
+{
+  "name": "Mercanta — Order Ready Notifier",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "d0000003-0000-0000-0000-000000000001",
+      "name": "Every 60 Seconds",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "seconds", "secondsInterval": 60 }]
+        }
+      }
+    },
+    {
+      "id": "d0000003-0000-0000-0000-000000000002",
+      "name": "Fetch Ready Tokens",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [480, 400],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ot.id, ot.token_number, c.phone AS customer_phone, string_agg(si.item_name || ' x' || si.quantity, ', ') AS items FROM order_tokens ot JOIN sales s ON s.id = ot.sale_id JOIN customers c ON c.id = s.customer_id JOIN sale_items si ON si.sale_id = s.id WHERE ot.status = 'ready' AND ot.ready_at >= NOW() - INTERVAL '90 seconds' AND c.phone IS NOT NULL AND ot.business_account_id = 'd72e900f-a09e-4b8c-bf77-aff843ef754a' GROUP BY ot.id, ot.token_number, c.phone ORDER BY ot.ready_at ASC;",
+        "options": {}
+      }
+    },
+    {
+      "id": "d0000003-0000-0000-0000-000000000003",
+      "name": "Format Ready Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 400],
+      "parameters": {
+        "jsCode": "// Each row from the Postgres node is a separate item — n8n runs this for each\nconst t = $input.item.json;\nif (!t.token_number || !t.customer_phone) return [];\n\nconst reply = `🔔 *Your order is ready!*\\n\\n🎫 Token *#${t.token_number}*\\n📦 ${t.items}\\n\\nPlease collect at the counter. Thank you!`;\n\nreturn [{ json: { reply, sender: t.customer_phone } }];"
+      }
+    },
+    {
+      "id": "d0000003-0000-0000-0000-000000000004",
+      "name": "Send WA: Ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [960, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "apikey", "value": "Musaib_2026_Secure" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{ $json.sender }}" },
+            { "name": "text", "value": "={{ $json.reply }}" }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+
+  "connections": {
+    "Every 60 Seconds": {
+      "main": [[{ "node": "Fetch Ready Tokens", "type": "main", "index": 0 }]]
+    },
+    "Fetch Ready Tokens": {
+      "main": [[{ "node": "Format Ready Message", "type": "main", "index": 0 }]]
+    },
+    "Format Ready Message": {
+      "main": [[{ "node": "Send WA: Ready", "type": "main", "index": 0 }]]
+    }
+  }
+}

@@ -406,7 +406,7 @@ export function ForecastPage() {
         }
         setForecastMethod(method);
         if (method === "prophet" && !prophetForecasts) {
-            fetchProphetForecasts();
+            triggerRefresh();
         }
     };
 

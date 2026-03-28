@@ -36,7 +36,7 @@ export async function getRestaurantMenu(
   onlyAvailable: boolean = false
 ) {
   try {
-    const { data, error } = await supabase.rpc("get_restaurant_menu", {
+    const { data, error } = await supabase!.rpc("get_restaurant_menu", {
       p_business_account_id: businessAccountId,
       p_available_only: onlyAvailable,
     });
@@ -54,7 +54,7 @@ export async function getRestaurantMenu(
  */
 export async function getMenuCategories(businessAccountId: string) {
   try {
-    const { data, error } = await supabase.rpc("get_menu_categories", {
+    const { data, error } = await supabase!.rpc("get_menu_categories", {
       p_business_account_id: businessAccountId,
     });
 
@@ -74,7 +74,7 @@ export async function createMenuItem(
   itemData: Omit<MenuItem, "id" | "business_account_id" | "created_at" | "updated_at" | "created_by">
 ) {
   try {
-    const { data, error } = await supabase.from("restaurant_menu").insert([
+    const { data, error } = await supabase!.from("restaurant_menu").insert([
       {
         business_account_id: businessAccountId,
         ...itemData,
@@ -97,7 +97,7 @@ export async function updateMenuItem(
   updates: Partial<Omit<MenuItem, "id" | "business_account_id" | "created_at" | "updated_at" | "created_by">>
 ) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from("restaurant_menu")
       .update({
         ...updates,
@@ -119,7 +119,7 @@ export async function updateMenuItem(
  */
 export async function deleteMenuItem(itemId: string) {
   try {
-    const { error } = await supabase
+    const { error } = await supabase!
       .from("restaurant_menu")
       .delete()
       .eq("id", itemId);
@@ -139,7 +139,7 @@ export async function toggleMenuItemAvailability(
   currentAvailability: boolean
 ) {
   try {
-    const { data, error } = await supabase.rpc(
+    const { data, error } = await supabase!.rpc(
       "toggle_menu_item_availability",
       {
         p_item_id: itemId,
@@ -163,7 +163,7 @@ export async function createMenuCategory(
   sortOrder: number = 0
 ) {
   try {
-    const { data, error } = await supabase.from("menu_categories").insert([
+    const { data, error } = await supabase!.from("menu_categories").insert([
       {
         business_account_id: businessAccountId,
         category_name: categoryName,
@@ -187,7 +187,7 @@ export async function updateMenuCategory(
   updates: Partial<Omit<MenuCategory, "id" | "business_account_id" | "created_at" | "updated_at">>
 ) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from("menu_categories")
       .update({
         ...updates,
@@ -209,7 +209,7 @@ export async function updateMenuCategory(
  */
 export async function deleteMenuCategory(categoryId: string) {
   try {
-    const { error } = await supabase
+    const { error } = await supabase!
       .from("menu_categories")
       .delete()
       .eq("id", categoryId);
@@ -228,16 +228,15 @@ export function subscribeToMenuUpdates(
   businessAccountId: string,
   callback: (items: MenuItem[]) => void
 ) {
-  const subscription = supabase
-    .from("restaurant_menu")
-    .on("*", (payload) => {
-      // Re-fetch menu when any changes occur
+  const channel = supabase!
+    .channel(`menu:${businessAccountId}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "restaurant_menu" }, () => {
       getRestaurantMenu(businessAccountId).then(callback);
     })
     .subscribe();
 
   return () => {
-    subscription.unsubscribe();
+    supabase!.removeChannel(channel);
   };
 }
 
@@ -248,16 +247,15 @@ export function subscribeToCategories(
   businessAccountId: string,
   callback: (categories: MenuCategory[]) => void
 ) {
-  const subscription = supabase
-    .from("menu_categories")
-    .on("*", (payload) => {
-      // Re-fetch categories when any changes occur
+  const channel = supabase!
+    .channel(`menu_cats:${businessAccountId}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "menu_categories" }, () => {
       getMenuCategories(businessAccountId).then(callback);
     })
     .subscribe();
 
   return () => {
-    subscription.unsubscribe();
+    supabase!.removeChannel(channel);
   };
 }
 
@@ -269,7 +267,7 @@ export async function batchImportMenuItems(
   items: Array<Omit<MenuItem, "id" | "business_account_id" | "created_at" | "updated_at" | "created_by">>
 ) {
   try {
-    const { data, error } = await supabase.from("restaurant_menu").insert(
+    const { data, error } = await supabase!.from("restaurant_menu").insert(
       items.map((item) => ({
         business_account_id: businessAccountId,
         ...item,

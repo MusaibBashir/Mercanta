@@ -1,0 +1,210 @@
+{
+  "name": "Mercanta — Payment Confirmed",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "c0000002-0000-0000-0000-000000000001",
+      "name": "Razorpay Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-payment",
+        "responseMode": "onReceived",
+        "options": { "rawBody": true }
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000003",
+      "name": "Verify & Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 400],
+      "parameters": {
+        "jsCode": "// ── HMAC-SHA256 verification ────────────────────────────────────────────────\n// rawBody is available because the webhook was set with options.rawBody = true\nconst rawBody = $input.item.json.rawBody || JSON.stringify($input.item.json.body || $input.item.json);\nconst headers = $input.item.json.headers || {};\nconst signature = headers['x-razorpay-signature'] || '';\nconst WEBHOOK_SECRET = 'YOUR_RAZORPAY_WEBHOOK_SECRET';\n\nlet valid = false;\ntry {\n  const encoder = new TextEncoder();\n  const key = await crypto.subtle.importKey(\n    'raw', encoder.encode(WEBHOOK_SECRET),\n    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']\n  );\n  const sigBuf = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));\n  const expected = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2,'0')).join('');\n  valid = expected === signature;\n} catch(e) {\n  valid = false;\n}\n\n// ── Parse event ─────────────────────────────────────────────────────────────\nlet event = {};\ntry { event = JSON.parse(rawBody); } catch(e) { event = {}; }\n\nconst eventType = event?.event || '';\nconst payment = event?.payload?.payment?.entity || {};\nconst paymentLink = event?.payload?.payment_link?.entity || {};\n\n// notes live on the payment_link entity for payment_link.paid events\nconst notes = paymentLink.notes || payment.notes || {};\n\n// Strip country code prefix from contact for consistent storage\nconst rawContact = payment.contact || notes.sender || '';\nconst sender = rawContact.replace(/^\\+?91/, '');\n\nreturn [{ json: {\n  valid,\n  eventType,\n  paymentId: payment.id || '',\n  paymentAmount: payment.amount || 0,\n  paymentLinkId: paymentLink.id || notes.razorpay_payment_link_id || '',\n  notes,\n  sender,\n  itemName: notes.item_name || '',\n  qty: parseInt(notes.qty) || 1,\n  price: parseFloat(notes.price) || 0,\n  BUSINESS_ACCOUNT_ID: notes.business_account_id || ''\n} }];"
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000004",
+      "name": "Is Valid Payment?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [720, 400],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.eventType }}",
+        "rules": {
+          "rules": [
+            { "value2": "payment_link.paid" }
+          ]
+        },
+        "fallbackOutput": 1
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000005",
+      "name": "Upsert Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO customers (name, phone) VALUES ('WhatsApp Customer', '{{ $json.sender }}') ON CONFLICT (phone) DO UPDATE SET name = COALESCE(NULLIF(customers.name, 'WhatsApp Customer'), EXCLUDED.name) RETURNING id, phone;",
+        "options": {}
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000006",
+      "name": "Lookup Pending Sale",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, total, payment_details FROM sales WHERE payment_details->>'razorpay_payment_link_id' = '{{ $('Verify & Parse').item.json.paymentLinkId }}' AND (payment_details->>'webhook_verified' IS NULL OR payment_details->>'webhook_verified' = 'false') AND business_account_id = '{{ $('Verify & Parse').item.json.BUSINESS_ACCOUNT_ID }}' LIMIT 1;",
+        "options": {}
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000007",
+      "name": "Sale Found?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1440, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.id || '' }}",
+        "rules": {
+          "rules": [
+            { "operation": "isNotEmpty" }
+          ]
+        },
+        "fallbackOutput": 1
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000008",
+      "name": "Increment Token Counter",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1680, 200],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE kds_settings SET token_number_current = token_number_current + 1, updated_at = NOW() WHERE business_account_id = '{{ $('Verify & Parse').item.json.BUSINESS_ACCOUNT_ID }}' RETURNING token_number_current, token_prefix;",
+        "options": {}
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000009",
+      "name": "Create Order Token",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1920, 200],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO order_tokens (business_account_id, token_number, sale_id, status, notes) VALUES ('{{ $('Verify & Parse').item.json.BUSINESS_ACCOUNT_ID }}', {{ $json.token_number_current }}, '{{ $('Lookup Pending Sale').item.json.id }}', 'ordered', 'WhatsApp order') RETURNING id, token_number;",
+        "options": {}
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000010",
+      "name": "Finalize Sale",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2160, 200],
+      "credentials": { "postgres": { "id": "35LH1zuTLUd1CCzS", "name": "Postgres account" } },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE sales SET customer_id = '{{ $('Upsert Customer').item.json.id }}', token_id = '{{ $('Create Order Token').item.json.id }}', token_number = {{ $('Create Order Token').item.json.token_number }}, payment_details = payment_details || jsonb_build_object('razorpay_payment_id', '{{ $('Verify & Parse').item.json.paymentId }}', 'webhook_verified', true) WHERE id = '{{ $('Lookup Pending Sale').item.json.id }}';",
+        "options": {}
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000011",
+      "name": "Format Receipt & Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, 200],
+      "parameters": {
+        "jsCode": "const ctx = $('Verify & Parse').item.json;\nconst tokenNum = $('Create Order Token').item.json.token_number;\nconst prefix = $('Increment Token Counter').item.json.token_prefix || 'T';\nconst total = parseFloat($('Lookup Pending Sale').item.json.total);\nconst avgPrep = 15; // could read from restaurant_config\n\nconst reply = `✅ *Payment Received!*\\n\\n🎫 Your Token: *${prefix}${tokenNum}*\\n\\n📦 ${ctx.qty}× ${ctx.itemName}\\n💰 Paid: ₹${total.toFixed(0)}\\n⏱ Est. ready in ~${avgPrep} min\\n\\nWe will notify you when your order is ready!\\n_Type *status* to check anytime._`;\n\nreturn [{ json: { reply, sender: ctx.sender } }];"
+      }
+    },
+    {
+      "id": "c0000002-0000-0000-0000-000000000012",
+      "name": "Send WA: Receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2640, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "apikey", "value": "Musaib_2026_Secure" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{ $json.sender }}" },
+            { "name": "text", "value": "={{ $json.reply }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "c0000002-0000-0000-0000-000000000013",
+      "name": "Stop: Invalid or Duplicate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [960, 580],
+      "parameters": {}
+    }
+  ],
+
+  "connections": {
+    "Razorpay Webhook": {
+      "main": [[
+        { "node": "Verify & Parse", "type": "main", "index": 0 }
+      ]]
+    },
+    "Verify & Parse": {
+      "main": [[{ "node": "Is Valid Payment?", "type": "main", "index": 0 }]]
+    },
+    "Is Valid Payment?": {
+      "main": [
+        [{ "node": "Upsert Customer", "type": "main", "index": 0 }],
+        [{ "node": "Stop: Invalid or Duplicate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Upsert Customer": {
+      "main": [[{ "node": "Lookup Pending Sale", "type": "main", "index": 0 }]]
+    },
+    "Lookup Pending Sale": {
+      "main": [[{ "node": "Sale Found?", "type": "main", "index": 0 }]]
+    },
+    "Sale Found?": {
+      "main": [
+        [{ "node": "Increment Token Counter", "type": "main", "index": 0 }],
+        [{ "node": "Stop: Invalid or Duplicate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Increment Token Counter": {
+      "main": [[{ "node": "Create Order Token", "type": "main", "index": 0 }]]
+    },
+    "Create Order Token": {
+      "main": [[{ "node": "Finalize Sale", "type": "main", "index": 0 }]]
+    },
+    "Finalize Sale": {
+      "main": [[{ "node": "Format Receipt & Token", "type": "main", "index": 0 }]]
+    },
+    "Format Receipt & Token": {
+      "main": [[{ "node": "Send WA: Receipt", "type": "main", "index": 0 }]]
+    }
+  }
+}

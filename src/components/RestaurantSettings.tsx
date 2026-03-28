@@ -40,7 +40,7 @@ export function RestaurantSettings() {
 
     const fetchSettings = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabase!
           .from('kds_settings')
           .select('*')
           .eq('business_account_id', activeBusinessAccount.id)
@@ -70,7 +70,7 @@ export function RestaurantSettings() {
             auto_reset_daily: true
           };
 
-          const { data: created } = await supabase
+          const { data: created } = await supabase!
             .from('kds_settings')
             .insert([newSettings])
             .select()
@@ -106,7 +106,7 @@ export function RestaurantSettings() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('kds_settings')
         .update({
           auto_print_tokens: settings.auto_print_tokens,
@@ -181,7 +181,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.auto_print_tokens}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('auto_print_tokens', checked)
                 }
               />
@@ -238,7 +238,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.auto_reset_daily}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('auto_reset_daily', checked)
                 }
               />
@@ -261,7 +261,7 @@ export function RestaurantSettings() {
               </p>
               <Select
                 value={settings.color_scheme}
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   handleSettingChange('color_scheme', value as 'light' | 'dark')
                 }
               >
@@ -311,7 +311,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.show_estimated_time}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('show_estimated_time', checked)
                 }
               />
@@ -334,7 +334,7 @@ export function RestaurantSettings() {
               </p>
               <Select
                 value={settings.ready_notification_type}
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   handleSettingChange('ready_notification_type', value as 'sound' | 'visual' | 'both')
                 }
               >
@@ -389,7 +389,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.show_customer_name}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('show_customer_name', checked)
                 }
               />
@@ -405,7 +405,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.show_order_notes}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('show_order_notes', checked)
                 }
               />
@@ -421,7 +421,7 @@ export function RestaurantSettings() {
               </div>
               <Switch
                 checked={settings.show_special_instructions}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   handleSettingChange('show_special_instructions', checked)
                 }
               />

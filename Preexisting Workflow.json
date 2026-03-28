@@ -1,0 +1,1303 @@
+{
+  "name": "WhatsApp Personal Knowledge Base v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "2f7a1ef6-2a91-4719-b7f3-31a55c06d323",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        24608,
+        11152
+      ],
+      "webhookId": "341cd0a0-e687-421f-bf5c-1e3c6397ddd6"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.data.key.remoteJid }}",
+              "value2": "916005499183@s.whatsapp.net"
+            }
+          ]
+        }
+      },
+      "id": "64ce5dd1-4a84-4e11-b584-aa63acc762ad",
+      "name": "Security Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        24832,
+        11152
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst msgData = body.data;\nconst msg = msgData.message || {};\n\nconst sender = msgData.key.remoteJid;\n\n// Command = what the user typed\nlet commandRaw = '';\nif (msg.extendedTextMessage?.text) {\n  commandRaw = msg.extendedTextMessage.text;\n} else if (msg.conversation) {\n  commandRaw = msg.conversation;\n}\ncommandRaw = commandRaw.trim().toLowerCase();\n\n// Quoted message - the content being tagged\nlet quotedMessage = '';\nif (msgData.contextInfo?.quotedMessage?.conversation) {\n  quotedMessage = msgData.contextInfo.quotedMessage.conversation;\n} else if (msgData.contextInfo?.quotedMessage?.extendedTextMessage?.text) {\n  quotedMessage = msgData.contextInfo.quotedMessage.extendedTextMessage.text;\n} else if (msg.extendedTextMessage?.contextInfo?.quotedMessage?.conversation) {\n  quotedMessage = msg.extendedTextMessage.contextInfo.quotedMessage.conversation;\n} else if (msg.extendedTextMessage?.contextInfo?.quotedMessage?.extendedTextMessage?.text) {\n  quotedMessage = msg.extendedTextMessage.contextInfo.quotedMessage.extendedTextMessage.text;\n}\n\nreturn [{ json: {\n  ...($input.item.json),\n  sender,\n  commandRaw,\n  quotedMessage\n}}];"
+      },
+      "id": "52eccecc-a027-448e-9830-37a151f21393",
+      "name": "Extract Variables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25040,
+        11152
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "m.d starts",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "m.d ends",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "doubt",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains",
+                      "name": "filter.operator.contains"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "film",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains",
+                      "name": "filter.operator.contains"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "event",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains",
+                      "name": "filter.operator.contains"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.commandRaw }}",
+                    "rightValue": "latex",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains",
+                      "name": "filter.operator.contains"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 6
+        }
+      },
+      "id": "878a6dc7-bd17-40fc-82a0-d4c6b660c4f1",
+      "name": "Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        25264,
+        11152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE md_buffer; INSERT INTO md_buffer (content, created_at) VALUES ('__SESSION_START__', NOW());",
+        "options": {}
+      },
+      "id": "329add4f-35b9-4dc4-a93a-7de1d0906a53",
+      "name": "MD Start: Clear Buffer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25488,
+        10848
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "🎬 Movie Discussion started. Forward your messages. Send 'M.D ends' when done."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "055db099-941a-40fb-89b8-56dda11771ed",
+      "name": "Reply: MD Started",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        25712,
+        10848
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT content FROM md_buffer WHERE content != '__SESSION_START__' ORDER BY created_at ASC;",
+        "options": {}
+      },
+      "id": "ced722e7-f74a-4bc2-a197-52b1d9c845be",
+      "name": "MD End: Read Buffer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25488,
+        11008
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $input.all().length }}",
+              "operation": "larger"
+            }
+          ]
+        }
+      },
+      "id": "d1e4de89-6a2c-484c-82b8-cbdf0d5692e4",
+      "name": "Guard: Buffer Has Content",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        25712,
+        11008
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Build Film Prompt').item.json.prompt }}"
+      },
+      "id": "91e462d4-fee8-4d70-b7a5-952ffaa32d16",
+      "name": "LLM Chain: Analyze Discussion",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        26384,
+        10976
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "id": "87a46674-fc2a-44a6-8e6e-d4377151f10a",
+      "name": "Groq: Analyze Discussion",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        26384,
+        11136
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "7jZm8cqW3Yv6r0wg",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($input.item.json.text || '').trim();\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nlet parsed;\ntry { parsed = JSON.parse(cleaned); }\ncatch(e) {\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nreturn [{ json: {\n  title:        parsed.title        || 'Unknown',\n  themes:       parsed.themes       || [],\n  opinions:     parsed.opinions     || [],\n  sentiment:    parsed.sentiment    || 'mixed',\n  rewatch:      parsed.rewatch      || 'maybe',\n  summary:      parsed.summary      || '',\n  discussed_at: parsed.discussed_at || new Date().toISOString().split('T')[0]\n}}];"
+      },
+      "id": "b4af45d1-2c9e-4432-843c-a5314822d0b9",
+      "name": "Parse Film JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        26368,
+        10976
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cinephile (title, themes, opinions, sentiment, rewatch, summary, discussed_at, created_at) VALUES ('{{ $json.title.replace(/'/g, \"''\") }}', '{{ JSON.stringify($json.themes) }}', '{{ JSON.stringify($json.opinions) }}', '{{ $json.sentiment }}', '{{ $json.rewatch }}', '{{ $json.summary.replace(/'/g, \"''\") }}', '{{ $json.discussed_at }}', NOW());",
+        "options": {}
+      },
+      "id": "d48dc735-711b-47e2-a3fe-b84cbc7ce2c5",
+      "name": "Supabase: Save Film",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        26592,
+        10976
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE md_buffer;",
+        "options": {}
+      },
+      "id": "31ffad27-371c-4cf5-8790-f623eecd72c1",
+      "name": "Clear Buffer After Save",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        26816,
+        10976
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "=✅ Movie Discussion saved!\n🎬 *{{ $('Parse Film JSON').item.json.title }}*\n📊 Sentiment: {{ $('Parse Film JSON').item.json.sentiment }}\n🔁 Rewatch: {{ $('Parse Film JSON').item.json.rewatch }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eb7b5147-c2b9-4495-9dc1-bfcbaa5f5cea",
+      "name": "Reply: MD Saved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        27040,
+        10976
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "⚠️ No messages found in buffer. Did you forward messages after 'M.D starts'?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3b5b18d2-a1f0-46a5-8bd0-bc0882d2a296",
+      "name": "Reply: Empty Buffer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        25936,
+        11120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT EXISTS(SELECT 1 FROM md_buffer WHERE content = '__SESSION_START__') as is_recording;",
+        "options": {}
+      },
+      "id": "29f30f02-ffb0-4579-aa4b-88c3c0addb79",
+      "name": "Check: Is Recording?",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25488,
+        11280
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_recording }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "025f431f-7483-4eb0-844b-4ebb46afa5e6",
+      "name": "Guard: Is Session Active?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        25712,
+        11280
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO md_buffer (content, created_at) VALUES ('{{ $json.quotedMessage.replace(/'/g, \"''\") }}', NOW());",
+        "options": {}
+      },
+      "id": "6efd846a-102b-416a-b96c-c2ed6d15ded3",
+      "name": "Buffer: Append Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25936,
+        11232
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.quotedMessage }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "07dd79b5-d6c1-4d7b-8b99-e35978d11fe6",
+      "name": "Guard: Empty QuotedMessage",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        25488,
+        11456
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_base (content, solution, category, created_at) VALUES ('{{ $(\"Extract Variables\").item.json.quotedMessage.replace(/'/g, \"''\") }}', '', 'Doubt', NOW());",
+        "options": {}
+      },
+      "id": "d515bf29-a43a-4466-9f4e-3d14f9eec4b6",
+      "name": "Supabase: Save Doubt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25936,
+        11408
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "✅ Doubt saved successfully!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b41402b4-addb-4ee6-9637-396aa4db20d5",
+      "name": "Reply: Doubt Saved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        26160,
+        11408
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cinephile (title, themes, opinions, sentiment, rewatch, summary, discussed_at, created_at) VALUES ('{{ $json.quotedMessage.replace(/'/g, \"''\") }}', NULL, NULL, NULL, NULL, NULL, NOW(), NOW());",
+        "options": {}
+      },
+      "id": "e5bf8400-0a97-461a-b443-cf816c6cb80a",
+      "name": "Supabase: Quick Save Film",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        25488,
+        11600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "✅ Film saved! (Tip: use M.D starts for full discussion tracking)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f39c8df-0785-4d72-9a02-6b01c7c57f8a",
+      "name": "Reply: Film Quick Saved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        25712,
+        11600
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Build Event Prompt').item.json.prompt }}"
+      },
+      "id": "36b5e34a-df29-45a0-b1c4-a1f623850449",
+      "name": "LLM Chain: Parse Event",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        25712,
+        11728
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "id": "b5fe541e-17e6-4f78-b379-1d24b8a24233",
+      "name": "Groq: Parse Event",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        25712,
+        11888
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "7jZm8cqW3Yv6r0wg",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($input.item.json.text || '').trim();\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nlet parsed;\ntry { parsed = JSON.parse(cleaned); }\ncatch(e) {\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nconst title = parsed.event_title || parsed.title || 'Untitled Event';\nreturn [{ json: { title, start: parsed.start, end: parsed.end, summary: parsed.summary || parsed.description || '' }}];"
+      },
+      "id": "c4cc1b53-572f-42c9-8345-f7ca37dd46aa",
+      "name": "Parse Event JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25712,
+        11728
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "musaibbashir02@gmail.com",
+          "mode": "list",
+          "cachedResultName": "musaibbashir02@gmail.com"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "description": "={{ $json.summary }}"
+        }
+      },
+      "id": "bf6ec12c-4d4d-497a-a8c7-cb46dbf09fe1",
+      "name": "Google Calendar: Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [
+        25936,
+        11728
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "XIChHSqTBZ8tsCT6",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "=✅ Event saved to Calendar!\n📌 *{{ $('Parse Event JSON').item.json.title }}*\n📅 {{ $('Parse Event JSON').item.json.start }}\n⏰ {{ $('Parse Event JSON').item.json.end }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "72633cd6-a507-4c2a-bf4f-053f2a598fae",
+      "name": "Reply: Event Saved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        26160,
+        11728
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "id": "3aa31571-5367-46a4-bdc7-d53caf015f36",
+      "name": "Silent Stop",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        25936,
+        11360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const quoted = $('Extract Variables').item.json.quotedMessage;\nconst command = $('Extract Variables').item.json.commandRaw;\nconst isoNow = new Date().toISOString();\nconst prompt = `You are a calendar assistant. Today is ${isoNow}. Timezone: Asia/Kolkata (UTC+5:30).\nParse this message and extract event details.\nMessage: ${quoted}\nContext: ${command}\nSTRICT RULES:\n- Use ONLY the date and time explicitly written in the message.\n- Current year is 2026. If no time given use 09:00:00. End = start + 1hr if not specified.\n- Include +05:30 offset in all datetimes.\n- event_title: short clear title from the message content.\n- summary: one concise sentence about the event.\nReturn ONLY this raw JSON, no markdown, no explanation:\n{\"event_title\":\"title\",\"start\":\"YYYY-MM-DDTHH:mm:ss+05:30\",\"end\":\"YYYY-MM-DDTHH:mm:ss+05:30\",\"summary\":\"one sentence\"}`;\nreturn [{ json: { prompt } }];"
+      },
+      "id": "07eeacbb-796a-419b-a820-4be31192556d",
+      "name": "Build Event Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25488,
+        11728
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { prompt: '', messageCount: 0 } }];\nconst discussion = rows.filter(r => r.json?.content).map((r,i) => `[${i+1}] ${r.json.content}`).join('\\n');\nconst messageCount = rows.length;\nconst today = new Date().toISOString().split('T')[0];\nconst prompt = `You are a film analysis assistant. Below is a real WhatsApp discussion about a movie.\nDiscussion (${messageCount} messages):\n${discussion}\nReturn ONLY a valid JSON object, no markdown fences:\n{\"title\":\"exact movie name\",\"themes\":[\"theme\"],\"opinions\":[\"opinion\"],\"sentiment\":\"positive\",\"rewatch\":\"yes\",\"summary\":\"2-3 sentences\",\"discussed_at\":\"${today}\"}\nRules: title = actual movie name from messages. Only use content from messages above.`;\nreturn [{ json: { prompt, messageCount } }];"
+      },
+      "id": "474a81fd-642b-49c7-a36a-734c306193b5",
+      "name": "Build Film Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        26160,
+        10976
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const quoted = $('Extract Variables').item.json.quotedMessage;\nconst prompt = `You are an expert mathematician and LaTeX typesetter.\nSolve the following and return a complete compilable .tex document.\nContent: ${quoted}\nInclude: \\\\documentclass{article}, \\\\usepackage{amsmath,amssymb,amsthm}, Problem section, Solution section with all steps.\nAfter the document write: PLAIN_ANSWER: <concise answer>`;\nreturn [{ json: { prompt } }];"
+      },
+      "id": "7561f5a4-437b-4ffa-a749-96500c97ec42",
+      "name": "Build LaTeX Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25712,
+        11904
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}"
+      },
+      "id": "2de1b76d-786b-4f1c-8ff9-50c48c49d787",
+      "name": "LLM Chain: Solve LaTeX",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        25936,
+        11904
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c5f8c7bf-52e9-458b-9723-ea10804f5bad",
+      "name": "Gemini: Solve LaTeX",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        25936,
+        12064
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kI1LZzxATxnuOYxA",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($input.item.json.text || '').trim();\nconst texMatch = raw.match(/(\\\\documentclass[\\s\\S]*?\\\\end\\{document\\})/i);\nconst texContent = texMatch ? texMatch[1].trim() : raw.trim();\nconst plainMatch = raw.match(/PLAIN_ANSWER:\\s*(.+)/i);\nconst plainAnswer = plainMatch ? plainMatch[1].trim() : 'See .tex in knowledge base';\nreturn [{ json: { texContent, plainAnswer } }];"
+      },
+      "id": "9a852b7d-b490-4ff3-8673-7d0d7133a553",
+      "name": "Parse LaTeX Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        26160,
+        11904
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_base (content, solution, category, created_at) VALUES ('{{ $(\"Extract Variables\").item.json.quotedMessage.replace(/'/g, \"''\") }}', '{{ $json.texContent.replace(/'/g, \"''\") }}', 'LaTeX', NOW());",
+        "options": {}
+      },
+      "id": "142cf601-8f85-4bad-af00-48e78d48c469",
+      "name": "Supabase: Save LaTeX",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        26384,
+        11904
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "916005499183"
+            },
+            {
+              "name": "text",
+              "value": "=✅ LaTeX solved!\n📐 *{{ $('Parse LaTeX Output').item.json.plainAnswer }}*\n📄 Full .tex saved to knowledge base."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00e851a5-0d2d-4808-89b7-e45667043eab",
+      "name": "Reply: LaTeX Saved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        26608,
+        11904
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Security Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Filter": {
+      "main": [
+        [
+          {
+            "node": "Extract Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Variables": {
+      "main": [
+        [
+          {
+            "node": "Command Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Command Router": {
+      "main": [
+        [
+          {
+            "node": "MD Start: Clear Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MD End: Read Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guard: Empty QuotedMessage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase: Quick Save Film",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Event Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build LaTeX Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MD Start: Clear Buffer": {
+      "main": [
+        [
+          {
+            "node": "Reply: MD Started",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MD End: Read Buffer": {
+      "main": [
+        [
+          {
+            "node": "Guard: Buffer Has Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard: Buffer Has Content": {
+      "main": [
+        [
+          {
+            "node": "Build Film Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: Empty Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Chain: Analyze Discussion": {
+      "main": [
+        [
+          {
+            "node": "Parse Film JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Film JSON": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save Film",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Save Film": {
+      "main": [
+        [
+          {
+            "node": "Clear Buffer After Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Buffer After Save": {
+      "main": [
+        [
+          {
+            "node": "Reply: MD Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Is Recording?": {
+      "main": [
+        [
+          {
+            "node": "Guard: Is Session Active?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard: Is Session Active?": {
+      "main": [
+        [
+          {
+            "node": "Buffer: Append Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Silent Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard: Empty QuotedMessage": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save Doubt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Save Doubt": {
+      "main": [
+        [
+          {
+            "node": "Reply: Doubt Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Quick Save Film": {
+      "main": [
+        [
+          {
+            "node": "Reply: Film Quick Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Chain: Parse Event": {
+      "main": [
+        [
+          {
+            "node": "Parse Event JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Event JSON": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar: Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar: Create Event": {
+      "main": [
+        [
+          {
+            "node": "Reply: Event Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq: Analyze Discussion": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Chain: Analyze Discussion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq: Parse Event": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Chain: Parse Event",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Film Prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM Chain: Analyze Discussion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Event Prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM Chain: Parse Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build LaTeX Prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM Chain: Solve LaTeX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Chain: Solve LaTeX": {
+      "main": [
+        [
+          {
+            "node": "Parse LaTeX Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Solve LaTeX": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Chain: Solve LaTeX",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LaTeX Output": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save LaTeX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Save LaTeX": {
+      "main": [
+        [
+          {
+            "node": "Reply: LaTeX Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4f3fbb19-f58e-41b4-b055-75df1be27fc3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ad359efe4c2712436fd5aaae711add163b0cf47f3a2a38d011d8175f82fac14b"
+  },
+  "id": "Yy4EufTAwz1xTtyG",
+  "tags": []
+}

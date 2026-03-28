@@ -29,6 +29,8 @@ import { AdminInventoryPage } from "./pages/admin/AdminInventoryPage";
 import { StockOrdersPage } from "./pages/admin/StockOrdersPage";
 import { FranchiseDashboard } from "./pages/franchise/FranchiseDashboard";
 import { OrderStockPage } from "./pages/franchise/OrderStockPage";
+import { BusinessSettingsPage } from "./pages/BusinessSettingsPage";
+import { AuditLogPage } from "./pages/AuditLogPage";
 import {
   LandingPage,
   SalesPage,
@@ -147,12 +149,16 @@ export default function App() {
             <Route path="/tokens" element={<ProtectedRoute><TokenTracker /></ProtectedRoute>} />
             <Route path="/menu" element={<ProtectedRoute><RestaurantMenuPage /></ProtectedRoute>} />
             <Route path="/settings/restaurant" element={<ProtectedRoute><RestaurantSettings /></ProtectedRoute>} />
+            <Route path="/settings/business" element={<ProtectedRoute><BusinessSettingsPage /></ProtectedRoute>} />
 
             {/* Shared routes (both roles) */}
             <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
             <Route path="/forecast" element={<ProtectedRoute><ForecastPage /></ProtectedRoute>} />
             <Route path="/sales-history" element={<ProtectedRoute><SalesHistoryPage /></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><CustomersPage /></ProtectedRoute>} />
+
+            {/* Audit log — admin only */}
+            <Route path="/audit-log" element={<ProtectedRoute requiredRole="admin"><AuditLogPage /></ProtectedRoute>} />
 
             {/* Old dashboard kept for admin analytics view */}
             <Route path="/analytics" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />

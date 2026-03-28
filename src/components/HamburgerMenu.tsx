@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, Plus, Package, TrendingUp, IndianRupee, Store, BarChart3, Users, History, LogOut, Home, FileText, ClipboardList, ShoppingCart, Monitor, Clock, Settings, UtensilsCrossed } from "lucide-react";
+import { Menu, Plus, Package, TrendingUp, IndianRupee, Store, BarChart3, Users, History, LogOut, Home, FileText, ClipboardList, ShoppingCart, Monitor, Clock, Settings, UtensilsCrossed, Shield } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -39,6 +39,8 @@ const ITEM_ACCENT: Record<string, string> = {
   "/kitchen":              "text-red-600 bg-red-50",
   "/tokens":               "text-teal-600 bg-teal-50",
   "/settings/restaurant":  "text-gray-600 bg-gray-100",
+  "/settings/business":    "text-indigo-600 bg-indigo-50",
+  "/audit-log":            "text-violet-600 bg-violet-50",
 };
 
 export function HamburgerMenu() {
@@ -59,6 +61,7 @@ export function HamburgerMenu() {
     { label: "Stock Orders",      icon: ClipboardList, to: "/admin/stock-orders" },
     { label: "Customers",         icon: Users,         to: "/customers" },
     { label: "Forecast",          icon: TrendingUp,    to: "/forecast" },
+    { label: "Audit Log",         icon: Shield,        to: "/audit-log" },
   ];
 
   const franchiseItems = [
@@ -69,6 +72,7 @@ export function HamburgerMenu() {
     { label: "Sales History",     icon: History,       to: "/sales-history" },
     { label: "Customers",         icon: Users,         to: "/customers" },
     { label: "Forecast",          icon: TrendingUp,    to: "/forecast" },
+    { label: "Business Settings", icon: Settings,      to: "/settings/business" },
   ];
 
   const restaurantItems = [
@@ -79,7 +83,8 @@ export function HamburgerMenu() {
     { label: "Order Tracking",    icon: Clock,           to: "/tokens" },
     { label: "Sales History",     icon: History,         to: "/sales-history" },
     { label: "Customers",         icon: Users,           to: "/customers" },
-    { label: "Settings",          icon: Settings,        to: "/settings/restaurant" },
+    { label: "Restaurant Settings", icon: Settings,       to: "/settings/restaurant" },
+    { label: "Business Settings",  icon: Store,          to: "/settings/business" },
   ];
 
   const menuItems = isAdmin ? adminItems : isRestaurant ? restaurantItems : franchiseItems;

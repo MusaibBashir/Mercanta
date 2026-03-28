@@ -27,7 +27,8 @@ interface SaleItem {
 
 export function SalesPage() {
     const { getInventoryBySku, recordSale, inventory, getCustomerByPhone } = useInventory();
-    const { profile, franchise, activeBusinessAccount } = useAuth();
+    const { profile, franchise, activeBusinessAccount, hasPermission } = useAuth();
+    const canSell = hasPermission('sales', 'write');
 
     // Menu items for restaurants
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -56,7 +57,9 @@ export function SalesPage() {
     const [entryMode, setEntryMode] = useState<"barcode" | "manual">("manual");
     const [items, setItems] = useState<SaleItem[]>([]);
     const { Razorpay } = useRazorpay();
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    // Per-tenant key takes priority; fall back to shared .env key
+    const razorpayKey = activeBusinessAccount?.settings?.razorpay_key_id
+        || import.meta.env.VITE_RAZORPAY_KEY_ID;
 
     useEffect(() => {
         if (razorpayKey) {
@@ -492,7 +495,18 @@ export function SalesPage() {
         }
     };
 
+    // Per-tenant shop identity — settings override franchise/defaults
+    const shopName = activeBusinessAccount?.settings?.shop_address
+        ? (activeBusinessAccount.display_name || activeBusinessAccount.business_name)
+        : (activeBusinessAccount?.display_name || activeBusinessAccount?.business_name || franchise?.name || "Mercanta");
+    const shopAddress = activeBusinessAccount?.settings?.shop_address
+        || (franchise?.region ? `${franchise.region}, ${franchise.state}` : "");
+
     const handleCompleteSale = async () => {
+        if (!canSell) {
+            toast.error("You don't have permission to record sales.");
+            return;
+        }
         if (items.length === 0) {
             toast.error("Please add at least one item");
             return;
@@ -634,8 +648,8 @@ export function SalesPage() {
                         transactionId,
                     },
                     {
-                        name: franchise?.name || "Mercanta",
-                        address: franchise?.region ? `${franchise.region}, ${franchise.state}` : "Demo Address",
+                        name: shopName,
+                        address: shopAddress,
                     },
                     printWindow
                 );
@@ -677,8 +691,8 @@ export function SalesPage() {
             const receiptCustomerPhone = customerPhone;
             const receiptCustomerEmail = customerEmail;
             const receiptPaymentMethod = paymentMethod;
-            const receiptShopName = franchise?.name || "Mercanta";
-            const receiptShopAddress = franchise?.region ? `${franchise.region}, ${franchise.state}` : "Demo Address";
+            const receiptShopName = shopName;
+            const receiptShopAddress = shopAddress;
 
             // Open window synchronously to bypass popup blocker
             const printTarget = window.open("", "_blank");
@@ -690,7 +704,7 @@ export function SalesPage() {
                 key: razorpayKey,
                 amount: Math.round(grandTotal * 100).toString(),
                 currency: "INR",
-                name: franchise?.name || "Mercanta Store",
+                name: shopName,
                 description: `Purchase Payment`,
                 handler: async function (response: any) {
                     const transactionId = response.razorpay_payment_id;

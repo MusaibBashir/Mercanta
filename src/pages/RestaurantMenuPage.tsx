@@ -64,7 +64,7 @@ export function RestaurantMenuPage() {
       setLoading(true);
 
       // Fetch menu items
-      const { data: items, error: itemsError } = await supabase.rpc(
+      const { data: items, error: itemsError } = await supabase!.rpc(
         "get_restaurant_menu",
         { p_business_account_id: activeBusinessAccount.id }
       );
@@ -72,7 +72,7 @@ export function RestaurantMenuPage() {
       if (itemsError) throw itemsError;
 
       // Fetch categories
-      const { data: cats, error: catsError } = await supabase.rpc(
+      const { data: cats, error: catsError } = await supabase!.rpc(
         "get_menu_categories",
         { p_business_account_id: activeBusinessAccount.id }
       );
@@ -141,7 +141,7 @@ export function RestaurantMenuPage() {
     if (!newCategoryName.trim()) return;
 
     try {
-      const { error } = await supabase.from("menu_categories").insert([
+      const { error } = await supabase!.from("menu_categories").insert([
         {
           business_account_id: activeBusinessAccount!.id,
           category_name: newCategoryName.trim(),
@@ -169,7 +169,7 @@ export function RestaurantMenuPage() {
     try {
       if (editingId) {
         // Update
-        const { error } = await supabase
+        const { error } = await supabase!
           .from("restaurant_menu")
           .update({
             item_name: formData.item_name,
@@ -187,7 +187,7 @@ export function RestaurantMenuPage() {
         toast.success("Menu item updated");
       } else {
         // Create
-        const { error } = await supabase.from("restaurant_menu").insert([
+        const { error } = await supabase!.from("restaurant_menu").insert([
           {
             business_account_id: activeBusinessAccount!.id,
             item_name: formData.item_name,
@@ -241,7 +241,7 @@ export function RestaurantMenuPage() {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await supabase!
         .from("restaurant_menu")
         .delete()
         .eq("id", id);
@@ -257,7 +257,7 @@ export function RestaurantMenuPage() {
 
   const handleToggleAvailability = async (id: string, current: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await supabase!
         .from("restaurant_menu")
         .update({ is_available: !current })
         .eq("id", id);
@@ -283,7 +283,7 @@ export function RestaurantMenuPage() {
 
   if (loading) {
     return (
-      <PageContainer>
+      <PageContainer title="Restaurant Menu">
         <div className="flex items-center justify-center h-64">
           Loading menu...
         </div>
@@ -292,7 +292,7 @@ export function RestaurantMenuPage() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer title="Restaurant Menu">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

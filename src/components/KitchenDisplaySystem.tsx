@@ -42,7 +42,7 @@ export function KitchenDisplaySystem() {
     if (!activeBusinessAccount) return;
 
     try {
-      const { data, error } = await supabase.rpc('get_active_tokens', {
+      const { data, error } = await supabase!.rpc('get_active_tokens', {
         p_business_account_id: activeBusinessAccount.id
       });
 
@@ -62,7 +62,7 @@ export function KitchenDisplaySystem() {
     fetchTokens();
 
     // Subscribe to real-time updates
-    const channel = supabase
+    const channel = supabase!
       .channel(`tokens:${activeBusinessAccount.id}`)
       .on(
         'postgres_changes',
@@ -79,7 +79,7 @@ export function KitchenDisplaySystem() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase!.removeChannel(channel);
     };
   }, [activeBusinessAccount?.id]);
 
@@ -87,7 +87,7 @@ export function KitchenDisplaySystem() {
   const updateTokenStatus = async (tokenId: string, newStatus: string) => {
     setUpdatingTokenId(tokenId);
     try {
-      const { data, error } = await supabase.rpc('update_token_status', {
+      const { data, error } = await supabase!.rpc('update_token_status', {
         p_token_id: tokenId,
         p_new_status: newStatus,
         p_reason: 'Updated from KDS'
@@ -263,7 +263,7 @@ export function KitchenDisplaySystem() {
               <div className="flex flex-col gap-2 mt-4">
                 {token.status !== 'preparing' && token.status !== 'prepared' && (
                   <Button
-                    onClick={e => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       updateTokenStatus(token.id, 'preparing');
                     }}
@@ -276,7 +276,7 @@ export function KitchenDisplaySystem() {
                 )}
                 {(token.status === 'preparing' || token.status === 'prepared') && (
                   <Button
-                    onClick={e => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       updateTokenStatus(token.id, 'prepared');
                     }}
@@ -289,7 +289,7 @@ export function KitchenDisplaySystem() {
                 )}
                 {token.status !== 'ready' && (
                   <Button
-                    onClick={e => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       updateTokenStatus(token.id, 'ready');
                     }}
@@ -302,7 +302,7 @@ export function KitchenDisplaySystem() {
                 )}
                 {token.status !== 'served' && (
                   <Button
-                    onClick={e => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       updateTokenStatus(token.id, 'served');
                     }}

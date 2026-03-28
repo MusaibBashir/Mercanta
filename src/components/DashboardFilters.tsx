@@ -38,7 +38,7 @@ export function DashboardFilters({ filters, onFiltersChange, categories, regions
             </label>
             <Select 
               value={filters.category} 
-              onValueChange={(value) => handleFilterChange('category', value)}
+              onValueChange={(value: string) => handleFilterChange('category', value)}
             >
               <SelectTrigger className="w-full border-gray-300 focus:border-gray-500 focus:ring-gray-500">
                 <SelectValue placeholder="Select category" />
@@ -61,7 +61,7 @@ export function DashboardFilters({ filters, onFiltersChange, categories, regions
             </label>
             <Select 
               value={filters.region} 
-              onValueChange={(value) => handleFilterChange('region', value)}
+              onValueChange={(value: string) => handleFilterChange('region', value)}
             >
               <SelectTrigger className="w-full border-gray-300 focus:border-gray-500 focus:ring-gray-500">
                 <SelectValue placeholder="Select region" />
@@ -84,7 +84,7 @@ export function DashboardFilters({ filters, onFiltersChange, categories, regions
             </label>
             <Select 
               value={filters.timePeriod} 
-              onValueChange={(value) => handleFilterChange('timePeriod', value)}
+              onValueChange={(value: string) => handleFilterChange('timePeriod', value)}
             >
               <SelectTrigger className="w-full border-gray-300 focus:border-gray-500 focus:ring-gray-500">
                 <SelectValue placeholder="Select period" />

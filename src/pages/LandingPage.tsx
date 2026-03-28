@@ -184,8 +184,8 @@ function Hero() {
         </Reveal>
       </div>
       {/* Hero visual */}
-      <Reveal delay={240} from={20} className="relative" style={{ marginTop: 56, overflow: "hidden" }}>
-        <div style={{ margin: "0 auto", maxWidth: 1200 }}>
+      <Reveal delay={240} from={20} className="relative">
+        <div style={{ marginTop: 56, overflow: "hidden", margin: "0 auto", maxWidth: 1200 }}>
           <ScreenPlaceholder label="Hero dashboard screenshot / animation" dark={false} aspect="21/9" />
         </div>
       </Reveal>

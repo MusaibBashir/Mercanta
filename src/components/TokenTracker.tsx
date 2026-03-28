@@ -23,7 +23,7 @@ export function TokenTracker() {
 
     const fetchUnpaidTokens = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_ready_unpaid_tokens', {
+        const { data, error } = await supabase!.rpc('get_ready_unpaid_tokens', {
           p_business_account_id: activeBusinessAccount.id
         });
 
@@ -41,7 +41,7 @@ export function TokenTracker() {
     fetchUnpaidTokens();
 
     // Subscribe to updates
-    const channel = supabase
+    const channel = supabase!
       .channel(`unpaid_tokens:${activeBusinessAccount.id}`)
       .on(
         'postgres_changes',
@@ -58,7 +58,7 @@ export function TokenTracker() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase!.removeChannel(channel);
     };
   }, [activeBusinessAccount?.id]);
 

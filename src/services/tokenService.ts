@@ -21,7 +21,7 @@ export interface TokenStatusUpdate {
  */
 export async function createOrderToken(params: TokenCreateParams) {
   try {
-    const { data, error } = await supabase.rpc('create_order_token', {
+    const { data, error } = await supabase!.rpc('create_order_token', {
       p_sale_id: params.sale_id,
       p_business_account_id: params.business_account_id,
       p_notes: params.notes
@@ -48,7 +48,7 @@ export async function createOrderToken(params: TokenCreateParams) {
  */
 export async function updateTokenStatus(params: TokenStatusUpdate) {
   try {
-    const { data, error } = await supabase.rpc('update_token_status', {
+    const { data, error } = await supabase!.rpc('update_token_status', {
       p_token_id: params.token_id,
       p_new_status: params.new_status,
       p_reason: params.reason,
@@ -75,7 +75,7 @@ export async function updateTokenStatus(params: TokenStatusUpdate) {
  */
 export async function getActiveTokens(businessAccountId: string) {
   try {
-    const { data, error } = await supabase.rpc('get_active_tokens', {
+    const { data, error } = await supabase!.rpc('get_active_tokens', {
       p_business_account_id: businessAccountId
     });
 
@@ -101,7 +101,7 @@ export async function getActiveTokens(businessAccountId: string) {
  */
 export async function getReadyUnpaidTokens(businessAccountId: string) {
   try {
-    const { data, error } = await supabase.rpc('get_ready_unpaid_tokens', {
+    const { data, error } = await supabase!.rpc('get_ready_unpaid_tokens', {
       p_business_account_id: businessAccountId
     });
 
@@ -127,7 +127,7 @@ export async function getReadyUnpaidTokens(businessAccountId: string) {
  */
 export async function getTokenHistory(tokenId: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('token_status_history')
       .select('*')
       .eq('token_id', tokenId)
@@ -154,7 +154,7 @@ export async function getTokenHistory(tokenId: string) {
  */
 export async function getKDSSettings(businessAccountId: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('kds_settings')
       .select('*')
       .eq('business_account_id', businessAccountId)
@@ -183,7 +183,7 @@ export function subscribeToTokenUpdates(
   businessAccountId: string,
   onUpdate: (payload: any) => void
 ) {
-  const channel = supabase
+  const channel = supabase!
     .channel(`tokens:${businessAccountId}`)
     .on(
       'postgres_changes',
@@ -198,7 +198,7 @@ export function subscribeToTokenUpdates(
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    supabase!.removeChannel(channel);
   };
 }
 
@@ -209,7 +209,7 @@ export function subscribeToTokenStatusUpdates(
   businessAccountId: string,
   onUpdate: (payload: any) => void
 ) {
-  const channel = supabase
+  const channel = supabase!
     .channel(`token_status:${businessAccountId}`)
     .on(
       'postgres_changes',
@@ -224,7 +224,7 @@ export function subscribeToTokenStatusUpdates(
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    supabase!.removeChannel(channel);
   };
 }
 
@@ -273,7 +273,7 @@ export async function createTokensBatch(
  */
 export async function getTokenQueuePosition(tokenId: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('token_queue_status')
       .select('queue_position, estimated_ready_time, estimated_minutes')
       .eq('token_id', tokenId)
@@ -307,7 +307,7 @@ export async function updateTokenQueuePosition(
     const estimatedTime = new Date();
     estimatedTime.setMinutes(estimatedTime.getMinutes() + estimatedMinutes);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('token_queue_status')
       .upsert({
         token_id: tokenId,

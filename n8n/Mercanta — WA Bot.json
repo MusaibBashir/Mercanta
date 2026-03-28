@@ -1,0 +1,795 @@
+{
+  "name": "Mercanta — WA Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mercanta",
+        "options": {}
+      },
+      "id": "b439a9ad-a337-4533-bc51-c91f7ad2c080",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        208
+      ],
+      "webhookId": "5692f08b-53af-4611-bb23-57beb1cbf22e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── Extract message from Evolution API payload ─────────────────────────────\nconst body = $input.item.json.body || $input.item.json;\nconst eventType = body?.event || '';\nconst data = body?.data || body;\nconst jid = data?.key?.remoteJid || '';\nconst sender = jid.replace('@s.whatsapp.net','').replace('@g.us','');\nconst isFromMe = data?.key?.fromMe === true;\nconst isGroup = jid.includes('@g.us');\nconst msgObj = data?.message || {};\nconst firstKey = Object.keys(msgObj)[0] || '';\n\nlet text = '';\nif (firstKey === 'conversation') text = msgObj.conversation || '';\nelse if (firstKey === 'extendedTextMessage') text = msgObj.extendedTextMessage?.text || '';\ntext = text.trim();\n\n// ── Config ──────────────────────────────────────────────────────────────────\nconst BUSINESS_ACCOUNT_ID = 'd72e900f-a09e-4b8c-bf77-aff843ef754a';\n\n// ── Ignore non-text, own messages, groups, and non-upsert events ────────────\nif (!text || isFromMe || isGroup || (eventType && eventType !== 'messages.upsert')) {\n  return [{ json: { intent: 'ignore', sender, text, itemName: '', qty: 1, BUSINESS_ACCOUNT_ID } }];\n}\n\n// ── Classify intent ─────────────────────────────────────────────────────────\n// Best routing: single classification here keeps Switch node simple and testable.\nconst lower = text.toLowerCase();\nlet intent = 'buy'; // default: treat unrecognized text as item name\nlet itemName = text;\nlet qty = 1;\n\nif (/^(start|menu|food|list)\\b/i.test(lower)) {\n  intent = 'menu'; itemName = '';\n\n} else if (/^(status|token|my order|track|order status)\\b/i.test(lower)) {\n  intent = 'status'; itemName = '';\n\n} else if (/^(receipt|bill|invoice)\\b/i.test(lower)) {\n  intent = 'receipt'; itemName = '';\n\n} else if (/^(buy|order|give me)\\s/i.test(lower)) {\n  // Parse 'buy Butter Chicken 2' → itemName='Butter Chicken', qty=2\n  const m = text.match(/^(?:buy|order|give me)\\s+(.+)/i);\n  if (m) {\n    const parts = m[1].trim().split(/\\s+/);\n    const last = parseInt(parts[parts.length - 1]);\n    if (!isNaN(last) && last > 0 && parts.length > 1) {\n      qty = last;\n      itemName = parts.slice(0, -1).join(' ');\n    } else {\n      itemName = m[1].trim();\n    }\n  }\n  // else: itemName stays as full text (default)\n}\n\nreturn [{ json: { intent, sender, text, itemName, qty, BUSINESS_ACCOUNT_ID } }];"
+      },
+      "id": "f2a0190e-947b-4d00-8002-3d35237ea899",
+      "name": "Parse & Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.intent }}",
+        "rules": {
+          "rules": [
+            { "operation": "equal", "value2": "ignore" },
+            { "operation": "equal", "value2": "menu" },
+            { "operation": "equal", "value2": "buy" },
+            { "operation": "equal", "value2": "status" },
+            { "operation": "equal", "value2": "receipt" }
+          ]
+        },
+        "fallbackOutput": 5
+      },
+      "id": "d0c4f1a9-30df-48ab-b75e-6cb42c044f7f",
+      "name": "Intent Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, category, item_name, price, is_vegetarian, is_spicy FROM restaurant_menu WHERE business_account_id = '{{ $('Parse & Intent').item.json.BUSINESS_ACCOUNT_ID }}' AND is_available = true ORDER BY category, sort_order, item_name;",
+        "options": {}
+      },
+      "id": "c4e77406-a080-4a3b-8e70-1b5eb95de63c",
+      "name": "Fetch Menu",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows.length) return [{ json: { reply: 'Sorry, no items available right now. Check back soon!' } }];\n\nlet out = '*Mercanta Menu*\\n\\n';\nlet cat = '';\nfor (const r of rows) {\n  const i = r.json;\n  if (i.category !== cat) { cat = i.category; out += `*${cat}*\\n`; }\n  const tags = [];\n  if (i.is_vegetarian) tags.push('🌿');\n  if (i.is_spicy) tags.push('🌶');\n  out += `  • ${i.item_name}${tags.length ? ' '+tags.join('') : ''} — ₹${parseFloat(i.price).toFixed(0)}\\n`;\n}\nout += '\\n_Just type an item name to order, e.g._ *Paneer Tikka*\\n_Type *status* to track your order_';\nreturn [{ json: { reply: out } }];"
+      },
+      "id": "2f20ee40-abd9-4c9c-8b9d-8639387d95f0",
+      "name": "Format Menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "524304bd-2ef5-4520-acec-2f9c4a6022a7",
+      "name": "Send WA: Menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, item_name, category, price FROM restaurant_menu WHERE business_account_id = '{{ $json.BUSINESS_ACCOUNT_ID }}' AND is_available = true AND LOWER(item_name) LIKE LOWER('%{{ $json.itemName.replace(/'/g, \"''\") }}%') ORDER BY CASE WHEN LOWER(item_name) = LOWER('{{ $json.itemName.replace(/'/g, \"''\") }}') THEN 0 ELSE 1 END, item_name LIMIT 1;",
+        "options": {}
+      },
+      "id": "e8d302d2-96ba-404a-92df-66febdae4613",
+      "name": "Lookup Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        0,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst ctx = $('Parse & Intent').item.json;\n\nif (!rows.length || !rows[0].json.id) {\n  return [{ json: {\n    found: false,\n    reply: `Sorry, *${ctx.itemName}* isn't available. Type *menu* to see what we have.`,\n    sender: ctx.sender\n  } }];\n}\n\nconst item = rows[0].json;\nconst qty = ctx.qty || 1;\nconst total = parseFloat(item.price) * qty;\n\nreturn [{ json: {\n  found: true,\n  itemId: item.id,\n  itemName: item.item_name,\n  price: parseFloat(item.price),\n  qty,\n  total,\n  totalPaise: Math.round(total * 100),\n  sender: ctx.sender,\n  BUSINESS_ACCOUNT_ID: ctx.BUSINESS_ACCOUNT_ID\n} }];"
+      },
+      "id": "73355c2e-91c7-4ed5-bb39-d04167f5e737",
+      "name": "Build Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "boolean",
+        "value1": "={{ $json.found }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": true
+            }
+          ]
+        },
+        "fallbackOutput": 1
+      },
+      "id": "d3b46646-ee49-47e3-9891-3d577cfe27dc",
+      "name": "Item Found?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        480,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sales (customer_name, total, subtotal, payment_method, payment_details, business_account_id, is_restaurant_order) VALUES ('WhatsApp Customer', {{ $('Build Order').item.json.total }}, {{ $('Build Order').item.json.total }}, 'upi', jsonb_build_object('razorpay_payment_link_id', '{{ $('Create a payment link').item.json.id }}', 'status', 'pending', 'sender', '{{ $('Build Order').item.json.sender }}'), '{{ $('Build Order').item.json.BUSINESS_ACCOUNT_ID }}', true) RETURNING id;",
+        "options": {}
+      },
+      "id": "82c491e1-2f2f-433b-a87a-4db2b1af3fdb",
+      "name": "Save Pending Sale",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        960,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sale_items (sale_id, sku, item_name, quantity, price) VALUES ('{{ $('Save Pending Sale').item.json.id }}', '{{ $('Build Order').item.json.itemId }}', '{{ $('Build Order').item.json.itemName.replace(/'/g, \"''\") }}', {{ $('Build Order').item.json.qty }}, {{ $('Build Order').item.json.price }});",
+        "options": {}
+      },
+      "id": "7b0bd881-acba-4d44-90f0-1b80fa7963d0",
+      "name": "Save Sale Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $('Build Order').item.json;\nconst link = $('Create a payment link').item.json;\nconst reply = `*Order Summary*\\n\\n📦 ${order.qty}× ${order.itemName}\\n💰 Total: ₹${order.total.toFixed(0)}\\n\\n💳 *Pay to confirm your order:*\\n${link.short_url}\\n\\n_Your token number will be sent once payment is received._\\n_Type *status* to track anytime._`;\nreturn [{ json: { reply } }];"
+      },
+      "id": "ad2665ec-df3d-40bf-8a45-2bb9a1ef665b",
+      "name": "Format Pay Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "309ff390-a2f7-48ed-9873-768f45072653",
+      "name": "Send WA: Pay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1680,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: $json.reply } }];"
+      },
+      "id": "36fe6bd8-421d-4724-8ab7-0db118945b88",
+      "name": "Format Not Found",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4e420777-13fc-426a-8dcc-5a515eff49a6",
+      "name": "Send WA: Not Found",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        992,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ot.token_number, ot.status, ot.created_at, ot.ready_at, tqs.estimated_minutes, si.item_name, si.quantity FROM order_tokens ot JOIN sales s ON s.id = ot.sale_id JOIN sale_items si ON si.sale_id = s.id LEFT JOIN token_queue_status tqs ON tqs.token_id = ot.id LEFT JOIN customers c ON c.id = s.customer_id WHERE (c.phone = '{{ $json.sender }}' OR s.payment_details->>'sender' = '{{ $json.sender }}') AND ot.is_active = true AND ot.business_account_id = '{{ $json.BUSINESS_ACCOUNT_ID }}' ORDER BY ot.created_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "id": "fd21dc95-27c2-4b34-9245-b80bc3df4ca5",
+      "name": "Lookup Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows.length || !rows[0].json.token_number) {\n  return [{ json: { reply: 'No active orders found. Type *menu* to browse our items.' } }];\n}\nconst t = rows[0].json;\nconst statusEmoji = { ordered:'🕐', confirmed:'✅', preparing:'👨‍🍳', prepared:'🍽', ready:'🔔', served:'✅', cancelled:'❌' };\nconst emoji = statusEmoji[t.status] || '🕐';\nlet reply = `${emoji} *Token #${t.token_number}*\\n\\nStatus: *${t.status.toUpperCase()}*\\n📦 ${t.item_name} ×${t.quantity}`;\nif (t.estimated_minutes) reply += `\\n⏱ Est. wait: ~${t.estimated_minutes} min`;\nif (t.status === 'ready') reply += '\\n\\n*Your order is ready for pickup!*\\nPlease collect at the counter.';\nreturn [{ json: { reply } }];"
+      },
+      "id": "152d00af-4c48-4ea9-bbde-ad591b4ce70f",
+      "name": "Format Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0dfbc1e0-a957-42a4-af23-49204ef7b3cb",
+      "name": "Send WA: Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        480,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.date, s.total, s.token_number, si.item_name, si.quantity, si.price, ot.status as order_status FROM sales s JOIN sale_items si ON si.sale_id = s.id LEFT JOIN order_tokens ot ON ot.sale_id = s.id LEFT JOIN customers c ON c.id = s.customer_id WHERE (c.phone = '{{ $json.sender }}' OR s.payment_details->>'sender' = '{{ $json.sender }}') AND s.business_account_id = '{{ $json.BUSINESS_ACCOUNT_ID }}' AND s.is_restaurant_order = true ORDER BY s.date DESC LIMIT 5;",
+        "options": {}
+      },
+      "id": "5ed9d3e5-b619-4a08-90c6-2e24cc7f99c0",
+      "name": "Lookup Receipt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        0,
+        608
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows.length || !rows[0].json.date) {\n  return [{ json: { reply: 'No orders found yet. Type *menu* to browse.' } }];\n}\nconst latest = rows[0].json;\nconst date = new Date(latest.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true });\nlet reply = `🧾 *Last Order*\\n📅 ${date}\\n\\n`;\nfor (const r of rows) {\n  reply += `  • ${r.json.item_name} ×${r.json.quantity} @ ₹${parseFloat(r.json.price).toFixed(0)}\\n`;\n}\nreply += `\\n💰 *Total: ₹${parseFloat(latest.total).toFixed(0)}*`;\nif (latest.token_number) reply += `\\n🎫 Token: *#${latest.token_number}*`;\nif (latest.order_status) reply += `\\n📋 Status: ${latest.order_status}`;\nreturn [{ json: { reply } }];"
+      },
+      "id": "40b828a6-4cba-4858-9340-11fa76fb811a",
+      "name": "Format Receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "666a36a4-cb6a-4f04-9c77-dfee3824cfc2",
+      "name": "Send WA: Receipt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        480,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: '*Welcome to Mercanta!*\\n\\nHere is what you can do:\\n  *menu* — browse our menu\\n  *<item name>* — type any item to order\\n  *buy <item> <qty>* — order with quantity\\n  *status* — track your current order\\n  *receipt* — view your last order\\n\\n_Example: type_ *Paneer Tikka* _or_ *buy Butter Chicken 2*' } }];"
+      },
+      "id": "903937e1-fe6d-4f77-8579-9f3688678945",
+      "name": "Format Help",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Musaib_2026_Secure"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Intent').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5f66225a-02ac-4b99-85ec-44b68cf36f7c",
+      "name": "Send WA: Help",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        240,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.razorpay.com/v1/payment_links",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "razorpayApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ amount: $('Build Order').item.json.totalPaise, currency: 'INR', description: $('Build Order').item.json.qty + '× ' + $('Build Order').item.json.itemName, customer: { contact: '+91' + $('Build Order').item.json.sender }, notify: { sms: true, email: false }, reminder_enable: false, notes: { item_name: $('Build Order').item.json.itemName, qty: String($('Build Order').item.json.qty), price: String($('Build Order').item.json.price), sender: $('Build Order').item.json.sender, business_account_id: $('Build Order').item.json.BUSINESS_ACCOUNT_ID } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        736,
+        112
+      ],
+      "id": "319a9a4f-8310-49ea-a791-3b2daeaa7091",
+      "name": "Create a payment link",
+      "credentials": {
+        "razorpayApi": {
+          "id": "0NPq2X8LJfIC8KPE",
+          "name": "Razorpay account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse & Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Intent": {
+      "main": [
+        [
+          {
+            "node": "Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Router": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Fetch Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lookup Item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lookup Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lookup Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Menu": {
+      "main": [
+        [
+          {
+            "node": "Format Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Menu": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Item": {
+      "main": [
+        [
+          {
+            "node": "Build Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Order": {
+      "main": [
+        [
+          {
+            "node": "Item Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Found?": {
+      "main": [
+        [
+          {
+            "node": "Create a payment link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Pending Sale": {
+      "main": [
+        [
+          {
+            "node": "Save Sale Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Sale Item": {
+      "main": [
+        [
+          {
+            "node": "Format Pay Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Pay Reply": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Pay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Not Found": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Status": {
+      "main": [
+        [
+          {
+            "node": "Format Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Status": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Receipt": {
+      "main": [
+        [
+          {
+            "node": "Format Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Receipt": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Help": {
+      "main": [
+        [
+          {
+            "node": "Send WA: Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a payment link": {
+      "main": [
+        [
+          {
+            "node": "Save Pending Sale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8f4e5e61-67f4-4fbc-8b8e-6ca50d0318f5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f6cc134aa3c6ce1041fde4bb21b71e68bb31dd53f372a196eb5e518dd151b1f1"
+  },
+  "id": "or1byjRkxKG1eXoD",
+  "tags": []
+}

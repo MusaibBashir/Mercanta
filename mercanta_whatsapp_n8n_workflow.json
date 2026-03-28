@@ -1,0 +1,1117 @@
+{
+  "name": "Mercanta WhatsApp Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mercanta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1a000001-0000-0000-0000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "mercanta-bot-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"ok\"}",
+        "options": {}
+      },
+      "id": "1a000002-0000-0000-0000-000000000002",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [480, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── Config ──────────────────────────────────────────────────────────────────\n// Set your Mercanta business_account_id from Supabase here:\nconst BUSINESS_ACCOUNT_ID = 'YOUR-BUSINESS-ACCOUNT-UUID-HERE';\n\n// Admin phones (91-prefixed, no spaces):\nconst ADMIN_PHONES = ['916005499183'];\n\n// Franchise owner phones:\nconst FRANCHISE_PHONES = ['91XXXXXXXXXX', '91XXXXXXXXXX'];\n\n// ── Parse incoming Evolution API webhook payload ─────────────────────────────\nconst body = $input.item.json.body || $input.item.json;\nconst messageData = body?.data || body;\n\n// Extract sender phone and message text\nlet sender = '';\nlet msgText = '';\nlet msgType = '';\n\ntry {\n  sender = (messageData?.key?.remoteJid || '').replace('@s.whatsapp.net','').replace('@g.us','');\n  msgType = messageData?.message ? Object.keys(messageData.message)[0] : '';\n  if (msgType === 'conversation') {\n    msgText = messageData.message.conversation || '';\n  } else if (msgType === 'extendedTextMessage') {\n    msgText = messageData.message.extendedTextMessage?.text || '';\n  } else {\n    msgText = '';\n  }\n} catch(e) {\n  sender = '';\n  msgText = '';\n}\n\nmsgText = msgText.trim();\nconst msgLower = msgText.toLowerCase();\n\n// ── Detect role ──────────────────────────────────────────────────────────────\nlet role = 'customer'; // default\nif (ADMIN_PHONES.includes(sender)) role = 'admin';\nelse if (FRANCHISE_PHONES.includes(sender)) role = 'franchise';\n\n// ── Parse command ────────────────────────────────────────────────────────────\n// Commands the bot understands:\n// Admin   : stock | addstock <item> <qty> | additem <category> <name> <price>\n// Franchise: sales | stock <item>\n// Customer : menu | buy <item> [qty] | receipt\n\nconst parts = msgText.split(/\\s+/);\nconst cmd = (parts[0] || '').toLowerCase();\nconst arg1 = parts[1] || '';\nconst arg2 = parts[2] || '';\nconst arg3 = parts[3] || '';\n\n// For buy command, item name may have multiple words — everything between cmd and last token\nlet itemName = '';\nif (cmd === 'buy' && parts.length >= 2) {\n  // Last arg might be a number (qty), rest is item name\n  const lastArg = parts[parts.length - 1];\n  const hasQty = /^\\d+$/.test(lastArg) && parts.length > 2;\n  itemName = hasQty ? parts.slice(1, -1).join(' ') : parts.slice(1).join(' ');\n}\nif (cmd === 'addstock') {\n  // addstock <name possibly multi word> <qty>\n  const lastArg = parts[parts.length - 1];\n  itemName = /^\\d+$/.test(lastArg) ? parts.slice(1, -1).join(' ') : parts.slice(1).join(' ');\n}\nif (cmd === 'stock' && role !== 'admin') {\n  itemName = parts.slice(1).join(' ');\n}\n\nconst qty = parseInt(arg1, 10) || 1;\nconst buyQty = (() => {\n  if (cmd !== 'buy') return 1;\n  const last = parseInt(parts[parts.length - 1], 10);\n  return (parts.length > 2 && last > 0) ? last : 1;\n})();\n\nreturn [{\n  json: {\n    sender,\n    role,\n    cmd,\n    arg1,\n    arg2,\n    arg3,\n    itemName,\n    buyQty,\n    msgText,\n    BUSINESS_ACCOUNT_ID\n  }\n}];\n"
+      },
+      "id": "1a000003-0000-0000-0000-000000000003",
+      "name": "Parse & Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.role }}",
+                    "rightValue": "admin",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 0
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.role }}",
+                    "rightValue": "franchise",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 1
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.role }}",
+                    "rightValue": "customer",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 2
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000004-0000-0000-0000-000000000004",
+      "name": "Role Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [720, 300]
+    },
+
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "stock",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 0
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "addstock",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 1
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "additem",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 2
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000005-0000-0000-0000-000000000005",
+      "name": "Admin Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [960, 120]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT item_name, category, price, is_available, is_vegetarian, is_spicy FROM restaurant_menu WHERE business_account_id = '{{ $json.BUSINESS_ACCOUNT_ID }}' ORDER BY category, item_name;",
+        "options": {}
+      },
+      "id": "1a000006-0000-0000-0000-000000000006",
+      "name": "Admin: Get All Stock",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 0],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '⚠️ No menu items found.' } }];\n\nlet text = '📋 *Mercanta Stock Levels*\\n\\n';\nlet currentCat = '';\nfor (const r of rows) {\n  const item = r.json;\n  if (item.category !== currentCat) {\n    currentCat = item.category;\n    text += `*${currentCat}*\\n`;\n  }\n  const status = item.is_available ? '✅' : '❌';\n  const tags = [];\n  if (item.is_vegetarian) tags.push('🌿Veg');\n  if (item.is_spicy) tags.push('🌶️Spicy');\n  text += `  ${status} ${item.item_name} — ₹${parseFloat(item.price).toFixed(2)} ${tags.join(' ')}\\n`;\n}\ntext += '\\n_Reply: addstock <item> to mark available_\\n_Reply: additem <cat> <name> <price> to add item_';\nreturn [{ json: { reply: text } }];\n"
+      },
+      "id": "1a000007-0000-0000-0000-000000000007",
+      "name": "Admin: Format Stock",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 0]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE restaurant_menu SET is_available = true, updated_at = NOW() WHERE business_account_id = '{{ $('Parse & Classify').item.json.BUSINESS_ACCOUNT_ID }}' AND LOWER(item_name) = LOWER('{{ $('Parse & Classify').item.json.itemName.replace(/'/g, \"''\") }}') RETURNING item_name, is_available;",
+        "options": {}
+      },
+      "id": "1a000008-0000-0000-0000-000000000008",
+      "name": "Admin: Mark Available",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 120],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '⚠️ Item not found. Check the item name and try again.' } }];\nconst item = rows[0].json;\nreturn [{ json: { reply: `✅ *${item.item_name}* is now marked as *available*.` } }];\n"
+      },
+      "id": "1a000009-0000-0000-0000-000000000009",
+      "name": "Admin: Format AddStock Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 120]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const data = $('Parse & Classify').item.json;\nconst category = data.arg1 || '';\nconst price = parseFloat(data.arg3) || 0;\n// item name = everything between arg1 and arg3 in the original message\n// 'additem <category> <name words> <price>'\nconst parts = data.msgText.split(/\\s+/);\n// parts[0]=additem, parts[1]=category, parts[-1]=price, middle = name\nlet itemName = '';\nif (parts.length >= 4) {\n  itemName = parts.slice(2, parts.length - 1).join(' ');\n} else {\n  itemName = data.arg2 || '';\n}\nreturn [{ json: { category, itemName, price, BUSINESS_ACCOUNT_ID: data.BUSINESS_ACCOUNT_ID } }];\n"
+      },
+      "id": "1a000010-0000-0000-0000-000000000010",
+      "name": "Admin: Parse AddItem Args",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 240]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO restaurant_menu (business_account_id, category, item_name, price, is_available) VALUES ('{{ $json.BUSINESS_ACCOUNT_ID }}', '{{ $json.category.replace(/'/g, \"''\") }}', '{{ $json.itemName.replace(/'/g, \"''\") }}', {{ $json.price }}, true) ON CONFLICT (business_account_id, item_name) DO UPDATE SET price = EXCLUDED.price, category = EXCLUDED.category, updated_at = NOW() RETURNING item_name, category, price;",
+        "options": {}
+      },
+      "id": "1a000011-0000-0000-0000-000000000011",
+      "name": "Admin: Insert Menu Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1440, 240],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '⚠️ Failed to add item. Check format: additem <category> <name> <price>' } }];\nconst item = rows[0].json;\nreturn [{ json: { reply: `✅ *${item.item_name}* added to *${item.category}* at *₹${parseFloat(item.price).toFixed(2)}*.` } }];\n"
+      },
+      "id": "1a000012-0000-0000-0000-000000000012",
+      "name": "Admin: Format AddItem Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: '🛠️ *Admin Commands:*\\n  `stock` — view all stock levels\\n  `addstock <item name>` — mark item as available\\n  `additem <category> <name> <price>` — add new menu item' } }];"
+      },
+      "id": "1a000013-0000-0000-0000-000000000013",
+      "name": "Admin: Help",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 360]
+    },
+
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "sales",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 0
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "stock",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000014-0000-0000-0000-000000000014",
+      "name": "Franchise Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [960, 300]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.date, s.customer_name, s.total, si.item_name, si.quantity, si.price FROM sales s JOIN sale_items si ON si.sale_id = s.id ORDER BY s.date DESC LIMIT 25;",
+        "options": {}
+      },
+      "id": "1a000015-0000-0000-0000-000000000015",
+      "name": "Franchise: Get Recent Sales",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 420],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '📭 No recent sales found.' } }];\n\n// Group by sale date + customer\nconst grouped = {};\nfor (const r of rows) {\n  const item = r.json;\n  const dateStr = new Date(item.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true });\n  const key = `${dateStr} — ${item.customer_name}`;\n  if (!grouped[key]) grouped[key] = { total: item.total, lines: [] };\n  grouped[key].lines.push(`    ${item.item_name} ×${item.quantity} @ ₹${parseFloat(item.price).toFixed(2)}`);\n}\n\nconst keys = Object.keys(grouped).slice(0, 5);\nlet text = '📊 *Last 5 Sales*\\n\\n';\nfor (const k of keys) {\n  text += `*${k}*\\n`;\n  text += grouped[k].lines.join('\\n') + '\\n';\n  text += `  💰 Total: ₹${parseFloat(grouped[k].total).toFixed(2)}\\n\\n`;\n}\nreturn [{ json: { reply: text.trim() } }];\n"
+      },
+      "id": "1a000016-0000-0000-0000-000000000016",
+      "name": "Franchise: Format Sales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 420]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT item_name, category, price, is_available, description FROM restaurant_menu WHERE business_account_id = '{{ $('Parse & Classify').item.json.BUSINESS_ACCOUNT_ID }}' AND LOWER(item_name) LIKE LOWER('%{{ $('Parse & Classify').item.json.itemName.replace(/'/g, \"''\") }}%') LIMIT 1;",
+        "options": {}
+      },
+      "id": "1a000017-0000-0000-0000-000000000017",
+      "name": "Franchise: Get Item Stock",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 540],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '⚠️ Item not found. Send `stock <item name>` to check.' } }];\nconst item = rows[0].json;\nconst status = item.is_available ? '✅ Available' : '❌ Not available';\nconst desc = item.description ? `\\n_${item.description}_` : '';\nreturn [{ json: { reply: `🍽️ *${item.item_name}*${desc}\\nCategory: ${item.category}\\nPrice: ₹${parseFloat(item.price).toFixed(2)}\\nStatus: ${status}` } }];\n"
+      },
+      "id": "1a000018-0000-0000-0000-000000000018",
+      "name": "Franchise: Format Item Stock",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: '🏪 *Franchise Commands:*\\n  `sales` — last 5 sales\\n  `stock <item name>` — check item availability' } }];"
+      },
+      "id": "1a000019-0000-0000-0000-000000000019",
+      "name": "Franchise: Help",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 640]
+    },
+
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "menu",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 0
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "buy",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 1
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.cmd }}",
+                    "rightValue": "receipt",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 2
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000020-0000-0000-0000-000000000020",
+      "name": "Customer Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [960, 480]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT item_name, category, price, is_vegetarian, is_spicy, description FROM restaurant_menu WHERE business_account_id = '{{ $json.BUSINESS_ACCOUNT_ID }}' AND is_available = true ORDER BY category, item_name;",
+        "options": {}
+      },
+      "id": "1a000021-0000-0000-0000-000000000021",
+      "name": "Customer: Get Menu",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 700],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '😔 No items available right now. Check back soon!' } }];\n\nlet text = '🍽️ *Mercanta Menu*\\n\\n';\nlet currentCat = '';\nfor (const r of rows) {\n  const item = r.json;\n  if (item.category !== currentCat) {\n    currentCat = item.category;\n    text += `*${currentCat}*\\n`;\n  }\n  const tags = [];\n  if (item.is_vegetarian) tags.push('🌿');\n  if (item.is_spicy) tags.push('🌶️');\n  const tagStr = tags.length ? ` ${tags.join('')}` : '';\n  text += `  • ${item.item_name}${tagStr} — ₹${parseFloat(item.price).toFixed(2)}\\n`;\n}\ntext += '\\n_To order: `buy <item name>` or `buy <item name> <qty>`_';\nreturn [{ json: { reply: text } }];\n"
+      },
+      "id": "1a000022-0000-0000-0000-000000000022",
+      "name": "Customer: Format Menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 700]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, item_name, price FROM restaurant_menu WHERE business_account_id = '{{ $('Parse & Classify').item.json.BUSINESS_ACCOUNT_ID }}' AND is_available = true AND LOWER(item_name) LIKE LOWER('%{{ $('Parse & Classify').item.json.itemName.replace(/'/g, \"''\") }}%') LIMIT 1;",
+        "options": {}
+      },
+      "id": "1a000023-0000-0000-0000-000000000023",
+      "name": "Customer: Lookup Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 820],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst classify = $('Parse & Classify').item.json;\n\nif (!rows || rows.length === 0) {\n  return [{ json: { found: false, reply: `⚠️ Sorry, *${classify.itemName}* is not available. Send *menu* to see what we have.` } }];\n}\n\nconst item = rows[0].json;\nconst qty = classify.buyQty || 1;\nconst total = parseFloat(item.price) * qty;\nconst totalPaise = Math.round(total * 100); // Razorpay uses paise\n\nreturn [{\n  json: {\n    found: true,\n    itemId: item.id,\n    itemName: item.item_name,\n    price: parseFloat(item.price),\n    qty,\n    total,\n    totalPaise,\n    sender: classify.sender,\n    BUSINESS_ACCOUNT_ID: classify.BUSINESS_ACCOUNT_ID\n  }\n}];\n"
+      },
+      "id": "1a000024-0000-0000-0000-000000000024",
+      "name": "Customer: Build Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 820]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.found }}",
+                    "rightValue": true,
+                    "operator": { "type": "boolean", "operation": "equals" }
+                  }
+                ]
+              },
+              "output": 0
+            }
+          ]
+        },
+        "options": { "fallbackOutput": 1 }
+      },
+      "id": "1a000025-0000-0000-0000-000000000025",
+      "name": "Item Found?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1680, 820]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.razorpay.com/v1/payment_links",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"amount\": {{ $json.totalPaise }},\n  \"currency\": \"INR\",\n  \"accept_partial\": false,\n  \"description\": \"Mercanta order: {{ $json.qty }}x {{ $json.itemName }}\",\n  \"customer\": { \"contact\": \"+{{ $json.sender }}\" },\n  \"notify\": { \"whatsapp\": false, \"sms\": false, \"email\": false },\n  \"reminder_enable\": false,\n  \"notes\": { \"item_name\": \"{{ $json.itemName }}\", \"qty\": {{ $json.qty }}, \"sender\": \"{{ $json.sender }}\", \"business_account_id\": \"{{ $json.BUSINESS_ACCOUNT_ID }}\" },\n  \"callback_url\": \"https://mercanta.app/pay/success\",\n  \"callback_method\": \"get\"\n}",
+        "options": {}
+      },
+      "id": "1a000026-0000-0000-0000-000000000026",
+      "name": "Razorpay: Create Payment Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1920, 760],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "RAZORPAY-CRED-ID",
+          "name": "Razorpay API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sales (customer_name, total, payment_method, payment_details, business_account_id) VALUES ('WhatsApp Customer', {{ $('Customer: Build Order').item.json.total }}, 'upi', '{\"razorpay_payment_link_id\": \"{{ $json.id }}\", \"status\": \"pending\"}', '{{ $('Customer: Build Order').item.json.BUSINESS_ACCOUNT_ID }}') RETURNING id;",
+        "options": {}
+      },
+      "id": "1a000027-0000-0000-0000-000000000027",
+      "name": "Save Pending Sale",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2160, 760],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sale_items (sale_id, item_name, quantity, price) VALUES ('{{ $('Save Pending Sale').item.json.id }}', '{{ $('Customer: Build Order').item.json.itemName.replace(/'/g, \"''\") }}', {{ $('Customer: Build Order').item.json.qty }}, {{ $('Customer: Build Order').item.json.price }});",
+        "options": {}
+      },
+      "id": "1a000028-0000-0000-0000-000000000028",
+      "name": "Save Sale Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2400, 760],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $('Customer: Build Order').item.json;\nconst link = $('Razorpay: Create Payment Link').item.json;\nconst reply = `🛒 *Order Summary*\\n\\n📦 ${order.qty}× ${order.itemName}\\n💰 Total: ₹${order.total.toFixed(2)}\\n\\n💳 *Pay here:*\\n${link.short_url}\\n\\n_Your order will be confirmed after payment. Send *receipt* to see your last order._`;\nreturn [{ json: { reply } }];\n"
+      },
+      "id": "1a000029-0000-0000-0000-000000000029",
+      "name": "Customer: Format Pay Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 760]
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.date, s.total, s.payment_details, si.item_name, si.quantity, si.price FROM sales s JOIN sale_items si ON si.sale_id = s.id WHERE s.business_account_id = '{{ $('Parse & Classify').item.json.BUSINESS_ACCOUNT_ID }}' ORDER BY s.date DESC LIMIT 5;",
+        "options": {}
+      },
+      "id": "1a000030-0000-0000-0000-000000000030",
+      "name": "Customer: Get Last Receipt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 960],
+      "credentials": {
+        "postgres": {
+          "id": "35LH1zuTLUd1CCzS",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows || rows.length === 0) return [{ json: { reply: '📭 No orders found yet.' } }];\n\nconst latest = rows[0].json;\nconst dateStr = new Date(latest.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: true });\nconst payDetails = latest.payment_details || {};\nconst payId = payDetails.razorpay_payment_id || payDetails.razorpay_payment_link_id || '—';\nconst status = payDetails.webhook_verified ? '✅ Verified' : (payDetails.status === 'pending' ? '⏳ Pending' : '✅ Paid');\n\nlet text = `🧾 *Your Last Order*\\n📅 ${dateStr}\\n\\n`;\nfor (const r of rows) {\n  const item = r.json;\n  text += `  • ${item.item_name} ×${item.quantity} @ ₹${parseFloat(item.price).toFixed(2)}\\n`;\n}\ntext += `\\n💰 *Total: ₹${parseFloat(latest.total).toFixed(2)}*\\n`;\ntext += `📋 Status: ${status}\\n`;\ntext += `🔑 Ref: ${payId}`;\nreturn [{ json: { reply: text } }];\n"
+      },
+      "id": "1a000031-0000-0000-0000-000000000031",
+      "name": "Customer: Format Receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 960]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { reply: '👋 Welcome to *Mercanta*!\\n\\nSend a command:\\n  `menu` — view available items\\n  `buy <item name>` — purchase an item\\n  `buy <item name> <qty>` — buy multiple\\n  `receipt` — view your last order' } }];"
+      },
+      "id": "1a000032-0000-0000-0000-000000000032",
+      "name": "Customer: Help",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 1080]
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000033-0000-0000-0000-000000000033",
+      "name": "Send Reply (Admin Stock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000034-0000-0000-0000-000000000034",
+      "name": "Send Reply (Admin AddStock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000035-0000-0000-0000-000000000035",
+      "name": "Send Reply (Admin AddItem)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1920, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000036-0000-0000-0000-000000000036",
+      "name": "Send Reply (Admin Help)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1440, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000037-0000-0000-0000-000000000037",
+      "name": "Send Reply (Franchise Sales)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000038-0000-0000-0000-000000000038",
+      "name": "Send Reply (Franchise Stock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000039-0000-0000-0000-000000000039",
+      "name": "Send Reply (Franchise Help)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1440, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000040-0000-0000-0000-000000000040",
+      "name": "Send Reply (Customer Menu)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000041-0000-0000-0000-000000000041",
+      "name": "Send Reply (Item Not Found)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1920, 880]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000042-0000-0000-0000-000000000042",
+      "name": "Send Reply (Pay Link)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2880, 760]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000043-0000-0000-0000-000000000043",
+      "name": "Send Reply (Receipt)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1680, 960]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution-api:8080/message/sendText/musaib_bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "Musaib_2026_Secure" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Parse & Classify').item.json.sender }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a000044-0000-0000-0000-000000000044",
+      "name": "Send Reply (Customer Help)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1440, 1080]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Respond 200", "type": "main", "index": 0 },
+          { "node": "Parse & Classify", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse & Classify": {
+      "main": [
+        [{ "node": "Role Router", "type": "main", "index": 0 }]
+      ]
+    },
+    "Role Router": {
+      "main": [
+        [{ "node": "Admin Command Router", "type": "main", "index": 0 }],
+        [{ "node": "Franchise Command Router", "type": "main", "index": 0 }],
+        [{ "node": "Customer Command Router", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Admin Command Router": {
+      "main": [
+        [{ "node": "Admin: Get All Stock", "type": "main", "index": 0 }],
+        [{ "node": "Admin: Mark Available", "type": "main", "index": 0 }],
+        [{ "node": "Admin: Parse AddItem Args", "type": "main", "index": 0 }],
+        [{ "node": "Admin: Help", "type": "main", "index": 0 }]
+      ]
+    },
+    "Admin: Get All Stock": {
+      "main": [[{ "node": "Admin: Format Stock", "type": "main", "index": 0 }]]
+    },
+    "Admin: Format Stock": {
+      "main": [[{ "node": "Send Reply (Admin Stock)", "type": "main", "index": 0 }]]
+    },
+    "Admin: Mark Available": {
+      "main": [[{ "node": "Admin: Format AddStock Reply", "type": "main", "index": 0 }]]
+    },
+    "Admin: Format AddStock Reply": {
+      "main": [[{ "node": "Send Reply (Admin AddStock)", "type": "main", "index": 0 }]]
+    },
+    "Admin: Parse AddItem Args": {
+      "main": [[{ "node": "Admin: Insert Menu Item", "type": "main", "index": 0 }]]
+    },
+    "Admin: Insert Menu Item": {
+      "main": [[{ "node": "Admin: Format AddItem Reply", "type": "main", "index": 0 }]]
+    },
+    "Admin: Format AddItem Reply": {
+      "main": [[{ "node": "Send Reply (Admin AddItem)", "type": "main", "index": 0 }]]
+    },
+    "Admin: Help": {
+      "main": [[{ "node": "Send Reply (Admin Help)", "type": "main", "index": 0 }]]
+    },
+
+    "Franchise Command Router": {
+      "main": [
+        [{ "node": "Franchise: Get Recent Sales", "type": "main", "index": 0 }],
+        [{ "node": "Franchise: Get Item Stock", "type": "main", "index": 0 }],
+        [{ "node": "Franchise: Help", "type": "main", "index": 0 }]
+      ]
+    },
+    "Franchise: Get Recent Sales": {
+      "main": [[{ "node": "Franchise: Format Sales", "type": "main", "index": 0 }]]
+    },
+    "Franchise: Format Sales": {
+      "main": [[{ "node": "Send Reply (Franchise Sales)", "type": "main", "index": 0 }]]
+    },
+    "Franchise: Get Item Stock": {
+      "main": [[{ "node": "Franchise: Format Item Stock", "type": "main", "index": 0 }]]
+    },
+    "Franchise: Format Item Stock": {
+      "main": [[{ "node": "Send Reply (Franchise Stock)", "type": "main", "index": 0 }]]
+    },
+    "Franchise: Help": {
+      "main": [[{ "node": "Send Reply (Franchise Help)", "type": "main", "index": 0 }]]
+    },
+
+    "Customer Command Router": {
+      "main": [
+        [{ "node": "Customer: Get Menu", "type": "main", "index": 0 }],
+        [{ "node": "Customer: Lookup Item", "type": "main", "index": 0 }],
+        [{ "node": "Customer: Get Last Receipt", "type": "main", "index": 0 }],
+        [{ "node": "Customer: Help", "type": "main", "index": 0 }]
+      ]
+    },
+    "Customer: Get Menu": {
+      "main": [[{ "node": "Customer: Format Menu", "type": "main", "index": 0 }]]
+    },
+    "Customer: Format Menu": {
+      "main": [[{ "node": "Send Reply (Customer Menu)", "type": "main", "index": 0 }]]
+    },
+    "Customer: Lookup Item": {
+      "main": [[{ "node": "Customer: Build Order", "type": "main", "index": 0 }]]
+    },
+    "Customer: Build Order": {
+      "main": [[{ "node": "Item Found?", "type": "main", "index": 0 }]]
+    },
+    "Item Found?": {
+      "main": [
+        [{ "node": "Razorpay: Create Payment Link", "type": "main", "index": 0 }],
+        [{ "node": "Send Reply (Item Not Found)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Razorpay: Create Payment Link": {
+      "main": [[{ "node": "Save Pending Sale", "type": "main", "index": 0 }]]
+    },
+    "Save Pending Sale": {
+      "main": [[{ "node": "Save Sale Item", "type": "main", "index": 0 }]]
+    },
+    "Save Sale Item": {
+      "main": [[{ "node": "Customer: Format Pay Reply", "type": "main", "index": 0 }]]
+    },
+    "Customer: Format Pay Reply": {
+      "main": [[{ "node": "Send Reply (Pay Link)", "type": "main", "index": 0 }]]
+    },
+    "Customer: Get Last Receipt": {
+      "main": [[{ "node": "Customer: Format Receipt", "type": "main", "index": 0 }]]
+    },
+    "Customer: Format Receipt": {
+      "main": [[{ "node": "Send Reply (Receipt)", "type": "main", "index": 0 }]]
+    },
+    "Customer: Help": {
+      "main": [[{ "node": "Send Reply (Customer Help)", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [{ "name": "mercanta" }],
+  "_setup_notes": {
+    "step_1_postgres": "The Postgres credential 'Postgres account' (id: 35LH1zuTLUd1CCzS) is reused from your personal bot. No action needed.",
+    "step_2_razorpay": "Create an HTTP Basic Auth credential in n8n named 'Razorpay API'. Username = Razorpay Key ID, Password = Razorpay Key Secret. Then replace the id 'RAZORPAY-CRED-ID' in the Razorpay node with the real credential id.",
+    "step_3_business_account_id": "In the 'Parse & Classify' code node, replace 'YOUR-BUSINESS-ACCOUNT-UUID-HERE' with your actual business_account_id UUID from the business_accounts table.",
+    "step_4_franchise_phones": "In 'Parse & Classify', replace the FRANCHISE_PHONES array with the real phone numbers of your franchise owners (91-prefixed, no spaces or dashes).",
+    "step_5_webhook": "After activating, set up Evolution API webhook to POST to: http://<your-n8n-host>:5678/webhook/mercanta",
+    "step_6_addstock_note": "The 'addstock' command marks an item as is_available=true. To mark unavailable, you can manually use Supabase dashboard or extend the bot with a 'removestock <item>' command following the same pattern."
+  }
+}

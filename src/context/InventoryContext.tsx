@@ -164,30 +164,43 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const franchiseId = auth?.franchise?.id;
 
     try {
+      const businessAccountId = auth?.activeBusinessAccount?.id;
+      const INVENTORY_LIMIT = 500;
+      const SALES_LIMIT = 200;
+
       // Fetch inventory — admin sees all, franchise sees own + admin warehouse
       let inventoryQuery = supabase
         .from('inventory')
         .select('*')
-        .order('item_name');
+        .is('deleted_at', null)
+        .order('item_name')
+        .limit(INVENTORY_LIMIT);
       if (!isAdmin && franchiseId) {
         // Franchise users see their own inventory + admin warehouse (franchise_id is null)
         inventoryQuery = inventoryQuery.or(`franchise_id.eq.${franchiseId},franchise_id.is.null`);
+      } else if (!isAdmin && businessAccountId) {
+        inventoryQuery = inventoryQuery.eq('business_account_id', businessAccountId);
       }
       const { data: inventoryData, error: inventoryError } = await inventoryQuery;
 
       if (inventoryError) throw inventoryError;
       setInventory((inventoryData || []).map(mapInventoryRow));
 
-      // Fetch customers (shared table — no franchise filtering for now)
-      const { data: customersData, error: customersError } = await supabase
+      // Fetch customers scoped to active business account (or unscoped for legacy)
+      let customersQuery = supabase
         .from('customers')
         .select('*')
-        .order('name');
+        .order('name')
+        .limit(500);
+      if (businessAccountId) {
+        customersQuery = customersQuery.or(`business_account_id.eq.${businessAccountId},business_account_id.is.null`);
+      }
+      const { data: customersData, error: customersError } = await customersQuery;
 
       if (customersError) throw customersError;
       setCustomers((customersData || []).map(mapCustomerRow));
 
-      // Fetch sales with items — franchise users only see their own
+      // Fetch sales with items — franchise users only see their own (paginated)
       let salesQuery = supabase
         .from('sales')
         .select(`
@@ -203,9 +216,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             price
           )
         `)
-        .order('date', { ascending: false });
+        .is('deleted_at', null)
+        .order('date', { ascending: false })
+        .limit(SALES_LIMIT);
       if (!isAdmin && franchiseId) {
         salesQuery = salesQuery.eq('franchise_id', franchiseId);
+      } else if (!isAdmin && businessAccountId) {
+        salesQuery = salesQuery.eq('business_account_id', businessAccountId);
       }
       const { data: salesData, error: salesError } = await salesQuery;
 
@@ -317,7 +334,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase!.removeChannel(channel);
     };
   }, [fetchData]);
 
@@ -421,7 +438,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return updateInventoryItem(item.id, { quantity: newQuantity });
   };
 
-  // Delete inventory item
+  // Soft-delete inventory item (sets deleted_at, preserved in audit log)
   const deleteInventoryItem = async (id: string): Promise<boolean> => {
     if (!isSupabaseAvailable() || !supabase) {
       setInventory((prev) => prev.filter((item) => item.id !== id));
@@ -429,10 +446,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await supabase
-        .from('inventory')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase!.rpc('soft_delete_inventory_item', {
+        p_item_id: id,
+      });
 
       if (error) throw error;
       setInventory((prev) => prev.filter((item) => item.id !== id));
@@ -500,26 +516,33 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseAvailable() || !supabase) return null;
 
     try {
-      // If phone is provided, use it as the unique identifier
+      const businessAccountId = authContext?.activeBusinessAccount?.id || null;
+
+      // If phone is provided, use it as the unique identifier (scoped to this tenant)
       if (customerPhone) {
-        const { data: existingCustomer } = await supabase
+        const phoneQuery = supabase
           .from('customers')
           .select('*')
-          .eq('phone', customerPhone)
-          .maybeSingle();
+          .eq('phone', customerPhone);
+        // Scope lookup to this tenant if we have a business account
+        if (businessAccountId) {
+          phoneQuery.eq('business_account_id', businessAccountId);
+        }
+        const { data: existingCustomer } = await phoneQuery.maybeSingle();
 
         if (existingCustomer) {
           return mapCustomerRow(existingCustomer);
         }
       }
 
-      // Create new customer
+      // Create new customer scoped to the active business account
       const { data: newCustomer, error } = await supabase
         .from('customers')
         .insert({
           name: customerName,
           phone: customerPhone || null,
           email: customerEmail || null,
+          business_account_id: businessAccountId,
         })
         .select('*')
         .single();

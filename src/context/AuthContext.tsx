@@ -21,6 +21,31 @@ export interface Franchise {
     created_at: string;
 }
 
+/** Per-tenant configuration stored in business_accounts.settings */
+export interface BusinessAccountSettings {
+    // Payment
+    razorpay_key_id?: string;       // Per-shop Razorpay publishable key
+    razorpay_account_id?: string;   // Razorpay linked account for settlements (future)
+    // Shop identity
+    shop_address?: string;
+    shop_city?: string;
+    shop_phone?: string;
+    shop_tagline?: string;
+    shop_gstin?: string;
+    // POS defaults
+    default_tax_rate?: number;
+    currency?: string;
+    // WhatsApp / notifications
+    whatsapp_number?: string;
+    // Feature flags
+    features?: {
+        kds?: boolean;
+        whatsapp_orders?: boolean;
+        loyalty_points?: boolean;
+        stock_alerts?: boolean;
+    };
+}
+
 // Feature 1: Modular Admin System
 export interface BusinessAccount {
     id: string;
@@ -29,7 +54,7 @@ export interface BusinessAccount {
     business_type: "standalone_shop" | "franchise_admin" | "franchise_unit" | "restaurant";
     display_name?: string;
     logo_url?: string;
-    settings?: Record<string, any>;
+    settings?: BusinessAccountSettings;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -54,15 +79,21 @@ export interface Permission {
     can_delete: boolean;
 }
 
+type PermissionScope = 'sales' | 'inventory' | 'customers' | 'orders' | 'admin' | 'all';
+type PermissionAction = 'read' | 'write' | 'delete';
+
 interface AuthContextType {
     user: any | null;
     profile: UserProfile | null;
     franchise: Franchise | null;
     activeBusinessAccount: BusinessAccount | null;
     businessAccounts: BusinessAccount[];
+    accountPermissions: Permission[];
     isLoading: boolean;
     isAdmin: boolean;
     error: string | null;
+    /** Check if the current user can perform an action in the active business account */
+    hasPermission: (scope: PermissionScope, action: PermissionAction) => boolean;
     signIn: (email: string, password: string) => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
     createFranchiseUser: (
@@ -88,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [franchise, setFranchise] = useState<Franchise | null>(null);
     const [activeBusinessAccount, setActiveBusinessAccount] = useState<BusinessAccount | null>(null);
     const [businessAccounts, setBusinessAccounts] = useState<BusinessAccount[]>([]);
+    const [accountPermissions, setAccountPermissions] = useState<Permission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
 
@@ -127,6 +159,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return data as Franchise;
         } catch (err) {
             return null;
+        }
+    }, []);
+
+    // Load permissions for a user+account combination
+    const fetchPermissions = useCallback(async (userId: string, accountId: string) => {
+        if (!supabase) return [];
+        try {
+            const { data, error } = await supabase
+                .from("permissions")
+                .select("*")
+                .eq("profile_id", userId)
+                .eq("business_account_id", accountId);
+            if (error) {
+                console.error("[Auth] Error fetching permissions:", error);
+                return [];
+            }
+            return (data || []) as Permission[];
+        } catch (err) {
+            console.error("[Auth] Error in fetchPermissions:", err);
+            return [];
         }
     }, []);
 
@@ -221,6 +273,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             activeAccount = accounts[0];
                         }
                         setActiveBusinessAccount(activeAccount);
+
+                        // Load permissions for the active account
+                        if (activeAccount) {
+                            const perms = await fetchPermissions(userId, activeAccount.id);
+                            if (isMounted) setAccountPermissions(perms);
+                        }
                     }
 
                     // Fetch franchise if role requires it (legacy support)
@@ -315,6 +373,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFranchise(null);
         setBusinessAccounts([]);
         setActiveBusinessAccount(null);
+        setAccountPermissions([]);
         setAuthError(null);
         console.log("[Auth] Local state cleared, redirecting to /login");
         // Force hard navigation to guarantee we reach login page
@@ -340,10 +399,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (sessionError) throw sessionError;
 
-            // Update local state with new active account
+            // Update local state with new active account + reload its permissions
             const account = businessAccounts.find(acc => acc.id === accountId);
             if (account) {
                 setActiveBusinessAccount(account);
+                const perms = await fetchPermissions(user.id, accountId);
+                setAccountPermissions(perms);
                 return { error: null };
             }
 
@@ -495,6 +556,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    /**
+     * Check if the current user can perform an action in the active business account.
+     * Admins always pass. Owners with scope='all' always pass.
+     */
+    const hasPermission = (scope: PermissionScope, action: PermissionAction): boolean => {
+        if (profile?.role === "admin") return true;
+        // Account owners always have full access — bypass permissions table entirely
+        if (user?.id && activeBusinessAccount?.owner_id === user.id) return true;
+        // Check for an 'all' scope permission first (owner/manager with full access)
+        const allScope = accountPermissions.find(p => p.scope === 'all');
+        if (allScope) {
+            if (action === 'read') return allScope.can_read;
+            if (action === 'write') return allScope.can_write;
+            if (action === 'delete') return allScope.can_delete;
+        }
+        // Check for the specific scope
+        const specific = accountPermissions.find(p => p.scope === scope);
+        if (specific) {
+            if (action === 'read') return specific.can_read;
+            if (action === 'write') return specific.can_write;
+            if (action === 'delete') return specific.can_delete;
+        }
+        return false;
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -503,9 +589,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 franchise,
                 activeBusinessAccount,
                 businessAccounts,
+                accountPermissions,
                 isLoading,
                 isAdmin: profile?.role === "admin",
                 error: authError,
+                hasPermission,
                 signIn,
                 signOut,
                 createFranchiseUser,
