@@ -30,6 +30,9 @@ export function SalesPage() {
     const { profile, franchise, activeBusinessAccount, hasPermission } = useAuth();
     const canSell = hasPermission('sales', 'write');
 
+    // Draft key scoped per business account so accounts don't share drafts
+    const DRAFT_KEY = `draft_sale_${activeBusinessAccount?.id ?? 'default'}`;
+
     // Menu items for restaurants
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [loadingMenu, setLoadingMenu] = useState(false);
@@ -157,6 +160,48 @@ export function SalesPage() {
             setHasHeldSale(true);
         }
     }, []);
+
+    // Restore draft cart when the active account becomes available (survives tab-switch reloads)
+    const draftRestoredRef = useRef(false);
+    useEffect(() => {
+        if (!activeBusinessAccount?.id || draftRestoredRef.current) return;
+        draftRestoredRef.current = true;
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const draft = JSON.parse(raw);
+            if (!draft.items?.length && !draft.customerName) return;
+            setItems(draft.items ?? []);
+            setCustomerName(draft.customerName ?? '');
+            setCustomerPhone(draft.customerPhone ?? '');
+            setCustomerEmail(draft.customerEmail ?? '');
+            setAdditionalNotes(draft.additionalNotes ?? '');
+            setSpecialInstructions(draft.specialInstructions ?? '');
+            setCartDiscountType(draft.cartDiscountType ?? 'flat');
+            setCartDiscountValue(draft.cartDiscountValue ?? 0);
+            setTaxRate(draft.taxRate ?? 0);
+            setPaymentMethod(draft.paymentMethod ?? 'cash');
+            setPointsToUse(draft.pointsToUse ?? 0);
+            toast.info('Cart restored from your last session.');
+        } catch { /* corrupted draft — ignore */ }
+    }, [activeBusinessAccount?.id]);
+
+    // Auto-save cart to localStorage so a tab-switch reload doesn't lose work
+    useEffect(() => {
+        if (!activeBusinessAccount?.id) return;
+        if (items.length > 0 || customerName) {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                items, customerName, customerPhone, customerEmail,
+                additionalNotes, specialInstructions,
+                cartDiscountType, cartDiscountValue,
+                taxRate, paymentMethod, pointsToUse, isRestaurantOrder,
+            }));
+        } else {
+            localStorage.removeItem(DRAFT_KEY);
+        }
+    }, [items, customerName, customerPhone, customerEmail, additionalNotes,
+        specialInstructions, cartDiscountType, cartDiscountValue,
+        taxRate, paymentMethod, pointsToUse, isRestaurantOrder, activeBusinessAccount?.id]);
 
     // Fuzzy search state
     const [searchQuery, setSearchQuery] = useState("");
@@ -776,6 +821,7 @@ export function SalesPage() {
     };
 
     const handleClearCart = () => {
+        localStorage.removeItem(DRAFT_KEY);
         setItems([]);
         setCustomerName("");
         setCustomerPhone("");

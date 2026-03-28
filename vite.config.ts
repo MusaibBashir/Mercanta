@@ -2,11 +2,36 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: './',
   plugins: [
     react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      strategies: 'generateSW',
+      workbox: {
+        // Allow caching files up to 4 MiB (main bundle exceeds the 2 MiB default)
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Cache all app shell assets — JS, CSS, HTML, fonts, images
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // SPA: serve index.html for any navigation miss
+        navigateFallback: 'index.html',
+        // Don't intercept Supabase API calls — let them go to network
+        navigateFallbackDenylist: [/^\/rest\//, /^\/auth\//, /^\/storage\//, /^\/realtime\//],
+        // Cache Supabase static assets with network-first strategy
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/(storage|functions)/,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'supabase-assets', networkTimeoutSeconds: 5 },
+          },
+        ],
+      },
+      // Reuse the existing manifest.json rather than generating a new one
+      manifest: false,
+    }),
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
