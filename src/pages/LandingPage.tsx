@@ -199,7 +199,11 @@ function Hero() {
       {/* Hero visual */}
       <Reveal delay={240} from={20} className="relative">
         <div style={{ marginTop: 56, overflow: "hidden", margin: "0 auto", maxWidth: 1200 }}>
-          <ScreenPlaceholder label="Hero dashboard screenshot / animation" dark={false} aspect="21/9" />
+          <img 
+            src="public/images/hero_dashboard_screenshot.jpeg" 
+            alt="Mercanta dashboard" 
+            style={{ width: "100%", height: "auto", borderRadius: 12 }}
+          />
         </div>
       </Reveal>
     </section>
@@ -368,7 +372,11 @@ function TwoProducts() {
           <Reveal delay={0}>
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div style={{ background: "#fff7f0", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
-                <ScreenPlaceholder label="Restaurant dashboard screenshot" dark={false} aspect="4/3" />
+                <img 
+                  src="public/images/restaurant_dashboard_screenshot.jpeg" 
+                  alt="Restaurant dashboard" 
+                  style={{ width: "100%", height: "auto", borderRadius: 12 }}
+                />
               </div>
               <div style={{ padding: isMobile ? "24px 24px 28px" : "36px 40px 40px" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: C.orange, marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>Restaurant Suite</p>
@@ -389,7 +397,11 @@ function TwoProducts() {
           <Reveal delay={isMobile ? 0 : 80}>
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div style={{ background: "#f0f4ff", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
-                <ScreenPlaceholder label="Franchise dashboard screenshot" dark={false} aspect="4/3" />
+                <img 
+                  src="public/images/Franchise_dashboard_screenshot.jpeg" 
+                  alt="Mercanta dashboard" 
+                  style={{ width: "100%", height: "auto", borderRadius: 12 }}
+                />
               </div>
               <div style={{ padding: isMobile ? "24px 24px 28px" : "36px 40px 40px" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>Franchise Manager</p>
@@ -420,28 +432,28 @@ const RESTAURANT_TABS = [
     label: "Menu",
     headline: "Your menu, live on every screen.",
     body: "Add dishes, set prices, toggle availability. The moment you make a change, it's reflected everywhere — at the counter, in the kitchen, and on WhatsApp.",
-    placeholder: "Menu management screenshot",
+    image: "/images/menu_management_screenshot.jpeg",
     dark: false,
   },
   {
     label: "Point of Sale",
     headline: "Take orders in seconds.",
     body: "Staff tap items, add special notes, look up returning customers by phone, and complete payments with cash, UPI, or card — all from a single screen.",
-    placeholder: "Point of sale screenshot",
+    image: "/images/point_of_sale_screenshot.jpeg",
     dark: false,
   },
   {
     label: "Kitchen Display",
     headline: "No paper. No shouting.",
     body: "Every order appears on the kitchen screen the instant it's placed. One tap moves it from Ordered to Preparing to Ready — live across every device.",
-    placeholder: "Kitchen Display System screenshot",
+    image: "/images/kitchen_display_screenshot.jpeg",
     dark: true,
   },
   {
     label: "WhatsApp Ordering",
     headline: "Order placed. Kitchen notified. Customer updated.",
     body: "Customers text your WhatsApp number, get the live menu, pay via the link, and receive an automatic message when their order is ready.",
-    placeholder: "WhatsApp ordering flow screenshot",
+    image: "/images/whatsapp_ordering_screenshot.png",
     dark: true,
   },
 ];
@@ -451,28 +463,28 @@ const FRANCHISE_TABS = [
     label: "Overview",
     headline: "See everything from one seat.",
     body: "Your admin dashboard shows live sales, activity, and inventory alerts across every franchise location — in real time, without switching accounts.",
-    placeholder: "Multi-location overview screenshot",
+    image: "/images/Admin_multilocation.jpg",
     dark: false,
   },
   {
     label: "Inventory",
     headline: "Stocked. Tracked. Ordered.",
     body: "Franchise locations submit stock orders in-app. You approve, dispatch, and track from the central admin — with a full audit history of every request.",
-    placeholder: "Inventory management screenshot",
+    image: "/images/inventory_managemtn.jpg",
     dark: false,
   },
   {
     label: "Stock Orders",
     headline: "Requests approved with a tap.",
     body: "When a location runs low, they submit a stock request. You review and approve from the admin panel — no emails, no calls, no back-and-forth.",
-    placeholder: "Stock orders screenshot",
+    image: "/images/stock_orders.jpg",
     dark: false,
   },
   {
     label: "Reports",
     headline: "Numbers that tell the story.",
     body: "Sales trends, revenue breakdowns, year-over-year growth, and regional performance — visualised clearly so you can make decisions fast.",
-    placeholder: "Financial reports screenshot",
+    image: "/images/Financial_reports.jpg",
     dark: false,
   },
 ];
@@ -555,7 +567,15 @@ function Highlights() {
       <div style={{ maxWidth: 1068, margin: "0 auto", padding: "64px 22px 0" }}>
         <div key={`${product}-${activeTab}`} style={{ animation: "fadeUp .45s cubic-bezier(.25,.46,.45,.94) both" }}>
           <div style={{ borderRadius: 20, overflow: "hidden", marginBottom: 40 }}>
-            <ScreenPlaceholder label={h.placeholder} dark={h.dark} aspect="16/7" />
+            {h.image ? (
+              <img 
+                src={h.image} 
+                alt={h.label}
+                style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
+              />
+            ) : (
+              <ScreenPlaceholder label={h.placeholder || "Feature screenshot"} dark={h.dark} aspect="16/7" />
+            )}
           </div>
           <div style={{ textAlign: "center", maxWidth: 680, margin: "0 auto" }}>
             <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: 980, background: isRestaurant ? "#fff4ee" : "#eff4ff", marginBottom: 14 }}>
@@ -579,8 +599,8 @@ function Highlights() {
 /* ─────────────────────────────────────────────
    FULL-BLEED FEATURE  (dark cinematic section)
 ───────────────────────────────────────────── */
-function FullBleedDark({ eyebrow, headline, sub, placeholder, accentColor = C.orange }: {
-  eyebrow: string; headline: string; sub: string; placeholder: string; accentColor?: string;
+function FullBleedDark({ eyebrow, headline, sub, placeholder, image, accentColor = C.orange }: {
+  eyebrow: string; headline: string; sub: string; placeholder?: string; image?: string; accentColor?: string;
 }) {
   return (
     <section style={{ background: C.black, padding: "100px 0 0", fontFamily: fontStack, overflow: "hidden" }}>
@@ -601,7 +621,15 @@ function FullBleedDark({ eyebrow, headline, sub, placeholder, accentColor = C.or
       </div>
       <Reveal delay={180} from={24}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <ScreenPlaceholder label={placeholder} dark aspect="21/9" />
+          {image ? (
+            <img 
+              src={image} 
+              alt={headline}
+              style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
+            />
+          ) : (
+            <ScreenPlaceholder label={placeholder || "Feature screenshot"} dark aspect="21/9" />
+          )}
         </div>
       </Reveal>
     </section>
@@ -611,9 +639,9 @@ function FullBleedDark({ eyebrow, headline, sub, placeholder, accentColor = C.or
 /* ─────────────────────────────────────────────
    SPLIT FEATURE  (image + text, alternating)
 ───────────────────────────────────────────── */
-function SplitFeature({ eyebrow, headline, body, bullets, placeholder, reverse = false, bg = C.white, accentColor = C.orange }: {
+function SplitFeature({ eyebrow, headline, body, bullets, placeholder, image, reverse = false, bg = C.white, accentColor = C.orange }: {
   eyebrow: string; headline: string; body: string; bullets: string[];
-  placeholder: string; reverse?: boolean; bg?: string; accentColor?: string;
+  placeholder?: string; image?: string; reverse?: boolean; bg?: string; accentColor?: string;
 }) {
   const isMobile = useIsMobile();
   return (
@@ -628,7 +656,15 @@ function SplitFeature({ eyebrow, headline, body, bullets, placeholder, reverse =
       }}>
         <div style={{ direction: "ltr" }}>
           <Reveal>
-            <ScreenPlaceholder label={placeholder} dark={bg === C.black} />
+            {image ? (
+              <img 
+                src={image} 
+                alt={headline}
+                style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
+              />
+            ) : (
+              <ScreenPlaceholder label={placeholder || "Feature screenshot"} dark={bg === C.black} />
+            )}
           </Reveal>
         </div>
         <div style={{ direction: "ltr" }}>
@@ -1098,7 +1134,7 @@ export function LandingPage() {
             eyebrow="Restaurant Suite"
             headline="The restaurant, connected."
             sub="Every part of your operation — menu, counter, kitchen, customer — talking to each other in real time."
-            placeholder="Restaurant overview full-bleed screenshot"
+            image="/images/restaurant_dashboard_screenshot.jpeg"
             accentColor={C.orange}
           />
 
@@ -1118,7 +1154,7 @@ export function LandingPage() {
               "Set individual prep times per dish",
               "Changes take effect immediately across all devices",
             ]}
-            placeholder="Menu management screenshot"
+            image="/images/menu_management_screenshot.jpeg"
             bg={C.white}
             accentColor={C.orange}
           />
@@ -1133,7 +1169,7 @@ export function LandingPage() {
               "Customer lookup — name and points fill in automatically",
               "Order token sent to kitchen the moment payment clears",
             ]}
-            placeholder="Point of sale screenshot"
+            image="/images/point_of_sale_screenshot.jpeg"
             reverse
             bg={C.offwhite}
             accentColor={C.orange}
@@ -1143,7 +1179,7 @@ export function LandingPage() {
             eyebrow="Kitchen Display System"
             headline="No paper. No shouting."
             sub="Live orders appear on the kitchen screen the instant they're placed. One tap moves an order from Confirmed to Preparing to Ready."
-            placeholder="Kitchen Display System screenshot"
+            image="/images/kitchen_display_screenshot.jpeg"
             accentColor="#30d158"
           />
 
@@ -1156,7 +1192,7 @@ export function LandingPage() {
             eyebrow="Franchise Manager"
             headline="Command every location."
             sub="A single dashboard giving you live visibility across every franchise — sales, inventory, orders, and performance at a glance."
-            placeholder="Franchise admin overview full-bleed screenshot"
+            image="/images/Franchise_dashboard_screenshot.jpeg"
             accentColor={C.blue}
           />
 
@@ -1176,7 +1212,7 @@ export function LandingPage() {
               "Inventory alerts and low-stock warnings",
               "One login for the whole business",
             ]}
-            placeholder="Multi-location dashboard screenshot"
+            image="/images/Admin_multilocation.jpg"
             bg={C.white}
             accentColor={C.blue}
           />
@@ -1191,7 +1227,7 @@ export function LandingPage() {
               "Full audit history of every stock movement",
               "Automatic low-stock notifications",
             ]}
-            placeholder="Inventory management screenshot"
+            image="/images/inventory_managemtn.jpg"
             reverse
             bg={C.offwhite}
             accentColor={C.blue}
@@ -1201,7 +1237,7 @@ export function LandingPage() {
             eyebrow="Financial Reports"
             headline="Numbers that tell the story."
             sub="Sales trends, revenue breakdowns, year-over-year growth, and regional performance — visualised clearly so you can make decisions fast."
-            placeholder="Financial reports and analytics screenshot"
+            image="/images/Financial_reports.jpg"
             accentColor={C.blue}
           />
         </div>
