@@ -45,6 +45,16 @@ function useFadeIn(threshold = 0.12) {
   return { ref, vis };
 }
 
+function useIsMobile(bp = 768) {
+  const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
+  useEffect(() => {
+    const fn = () => setMobile(window.innerWidth <= bp);
+    window.addEventListener("resize", fn, { passive: true });
+    return () => window.removeEventListener("resize", fn);
+  }, [bp]);
+  return mobile;
+}
+
 /* ─────────────────────────────────────────────
    PRIMITIVES
 ───────────────────────────────────────────── */
@@ -125,6 +135,7 @@ function ScreenPlaceholder({ label, dark = true, aspect = "16/9", height }: {
 ───────────────────────────────────────────── */
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const isMobile = useIsMobile();
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 1);
     window.addEventListener("scroll", fn, { passive: true });
@@ -141,11 +152,13 @@ function Nav() {
     }}>
       <div style={{ maxWidth: 1068, margin: "0 auto", height: "100%", padding: "0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: fontStack }}>
         <span style={{ fontSize: 18, fontWeight: 700, color: C.dark, letterSpacing: "-0.01em" }}>Mercanta</span>
-        <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-          {[["#restaurant", "Restaurant"], ["#franchise", "Franchise"], ["#compare", "Compare"]].map(([href, label]) => (
-            <a key={href} href={href} style={{ fontSize: 12, color: C.dark, textDecoration: "none", letterSpacing: "0.01em" }}>{label}</a>
-          ))}
-        </div>
+        {!isMobile && (
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            {[["#restaurant", "Restaurant"], ["#franchise", "Franchise"], ["#compare", "Compare"]].map(([href, label]) => (
+              <a key={href} href={href} style={{ fontSize: 12, color: C.dark, textDecoration: "none", letterSpacing: "0.01em" }}>{label}</a>
+            ))}
+          </div>
+        )}
         <Link to="/login" style={{
           fontSize: 13, fontWeight: 500, color: C.white,
           background: C.blue, borderRadius: 980, padding: "6px 14px",
@@ -280,41 +293,7 @@ function ModularSection() {
         </Reveal>
 
         {/* Combo cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {COMBOS.map((combo, i) => (
-            <Reveal key={i} delay={i * 60}>
-              <div
-                onMouseEnter={() => setHoveredCombo(i)}
-                onMouseLeave={() => setHoveredCombo(null)}
-                style={{
-                  padding: "28px 28px",
-                  borderRadius: 18,
-                  border: `1.5px solid ${hoveredCombo === i ? combo.accent : C.sep}`,
-                  background: hoveredCombo === i ? (combo.accent === C.orange ? "#fff7f0" : combo.accent === C.blue ? "#f0f4ff" : "#f8f8f8") : C.white,
-                  cursor: "default",
-                  transition: "all .25s cubic-bezier(.25,.46,.45,.94)",
-                }}
-              >
-                <p style={{ fontSize: 13, fontWeight: 600, color: combo.accent, marginBottom: 6, letterSpacing: "0.03em", textTransform: "uppercase" }}>
-                  Example
-                </p>
-                <h4 style={{ fontSize: 20, fontWeight: 700, letterSpacing: F.lsTitle, color: C.dark, margin: "0 0 6px" }}>{combo.name}</h4>
-                <p style={{ fontSize: 14, color: C.mid, margin: "0 0 16px", lineHeight: 1.5 }}>{combo.desc}</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {combo.modules.map((m) => (
-                    <span key={m} style={{
-                      fontSize: 12, padding: "3px 10px", borderRadius: 980,
-                      background: hoveredCombo === i ? combo.accent : C.offwhite,
-                      color: hoveredCombo === i ? "#fff" : C.mid,
-                      border: `1px solid ${hoveredCombo === i ? combo.accent : C.sep}`,
-                      transition: "all .25s",
-                    }}>{m}</span>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+        <ComboCardsGrid hoveredCombo={hoveredCombo} setHoveredCombo={setHoveredCombo} />
 
         <Reveal delay={200}>
           <p style={{ textAlign: "center", marginTop: 36, fontSize: F.body, color: C.mid }}>
@@ -327,12 +306,54 @@ function ModularSection() {
   );
 }
 
+function ComboCardsGrid({ hoveredCombo, setHoveredCombo }: { hoveredCombo: number | null; setHoveredCombo: (i: number | null) => void }) {
+  const isMobile = useIsMobile();
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+      {COMBOS.map((combo, i) => (
+        <Reveal key={i} delay={i * 60}>
+          <div
+            onMouseEnter={() => setHoveredCombo(i)}
+            onMouseLeave={() => setHoveredCombo(null)}
+            style={{
+              padding: "28px 28px",
+              borderRadius: 18,
+              border: `1.5px solid ${hoveredCombo === i ? combo.accent : C.sep}`,
+              background: hoveredCombo === i ? (combo.accent === C.orange ? "#fff7f0" : combo.accent === C.blue ? "#f0f4ff" : "#f8f8f8") : C.white,
+              cursor: "default",
+              transition: "all .25s cubic-bezier(.25,.46,.45,.94)",
+            }}
+          >
+            <p style={{ fontSize: 13, fontWeight: 600, color: combo.accent, marginBottom: 6, letterSpacing: "0.03em", textTransform: "uppercase" }}>
+              Example
+            </p>
+            <h4 style={{ fontSize: 20, fontWeight: 700, letterSpacing: F.lsTitle, color: C.dark, margin: "0 0 6px" }}>{combo.name}</h4>
+            <p style={{ fontSize: 14, color: C.mid, margin: "0 0 16px", lineHeight: 1.5 }}>{combo.desc}</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {combo.modules.map((m) => (
+                <span key={m} style={{
+                  fontSize: 12, padding: "3px 10px", borderRadius: 980,
+                  background: hoveredCombo === i ? combo.accent : C.offwhite,
+                  color: hoveredCombo === i ? "#fff" : C.mid,
+                  border: `1px solid ${hoveredCombo === i ? combo.accent : C.sep}`,
+                  transition: "all .25s",
+                }}>{m}</span>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  );
+}
+
 /* ─────────────────────────────────────────────
    TWO PRODUCTS SECTION
 ───────────────────────────────────────────── */
 function TwoProducts() {
+  const isMobile = useIsMobile();
   return (
-    <section style={{ background: C.offwhite, padding: "80px 22px", fontFamily: fontStack }}>
+    <section style={{ background: C.offwhite, padding: isMobile ? "60px 16px" : "80px 22px", fontFamily: fontStack }}>
       <div style={{ maxWidth: 1068, margin: "0 auto" }}>
         <Reveal>
           <p style={{ fontSize: F.callout, fontWeight: 600, color: C.mid, textAlign: "center", marginBottom: 8 }}>Two solutions. One platform.</p>
@@ -342,14 +363,14 @@ function TwoProducts() {
             Built for every kind of business.
           </h2>
         </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
           {/* Restaurant card */}
           <Reveal delay={0}>
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <div style={{ background: "#fff7f0", padding: "48px 40px 32px", flex: 1 }}>
+              <div style={{ background: "#fff7f0", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
                 <ScreenPlaceholder label="Restaurant dashboard screenshot" dark={false} aspect="4/3" />
               </div>
-              <div style={{ padding: "36px 40px 40px" }}>
+              <div style={{ padding: isMobile ? "24px 24px 28px" : "36px 40px 40px" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: C.orange, marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>Restaurant Suite</p>
                 <h3 style={{ fontSize: F.title1, fontWeight: 700, letterSpacing: F.lsTitle, lineHeight: 1.1, color: C.dark, margin: "0 0 12px" }}>
                   The complete kitchen system.
@@ -365,12 +386,12 @@ function TwoProducts() {
             </div>
           </Reveal>
           {/* Franchise card */}
-          <Reveal delay={80}>
+          <Reveal delay={isMobile ? 0 : 80}>
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <div style={{ background: "#f0f4ff", padding: "48px 40px 32px", flex: 1 }}>
+              <div style={{ background: "#f0f4ff", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
                 <ScreenPlaceholder label="Franchise dashboard screenshot" dark={false} aspect="4/3" />
               </div>
-              <div style={{ padding: "36px 40px 40px" }}>
+              <div style={{ padding: isMobile ? "24px 24px 28px" : "36px 40px 40px" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>Franchise Manager</p>
                 <h3 style={{ fontSize: F.title1, fontWeight: 700, letterSpacing: F.lsTitle, lineHeight: 1.1, color: C.dark, margin: "0 0 12px" }}>
                   Command every location.
@@ -594,9 +615,17 @@ function SplitFeature({ eyebrow, headline, body, bullets, placeholder, reverse =
   eyebrow: string; headline: string; body: string; bullets: string[];
   placeholder: string; reverse?: boolean; bg?: string; accentColor?: string;
 }) {
+  const isMobile = useIsMobile();
   return (
-    <section style={{ background: bg, padding: "100px 22px", fontFamily: fontStack }}>
-      <div style={{ maxWidth: 1068, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "center", direction: reverse ? "rtl" : "ltr" }}>
+    <section style={{ background: bg, padding: isMobile ? "60px 16px" : "100px 22px", fontFamily: fontStack }}>
+      <div style={{
+        maxWidth: 1068, margin: "0 auto",
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap: isMobile ? 32 : 72,
+        alignItems: "center",
+        direction: (!isMobile && reverse) ? "rtl" : "ltr",
+      }}>
         <div style={{ direction: "ltr" }}>
           <Reveal>
             <ScreenPlaceholder label={placeholder} dark={bg === C.black} />
@@ -811,6 +840,7 @@ function IPhoneWhatsApp() {
    WHATSAPP SECTION  (cinematic, dark)
 ───────────────────────────────────────────── */
 function WhatsAppSection() {
+  const isMobile = useIsMobile();
   const steps = [
     { n: "01", title: 'Customer texts "menu"', desc: 'Your customer messages your WhatsApp number. Within seconds they get your full live menu pulled directly from Mercanta.' },
     { n: "02", title: "They order and pay", desc: 'They reply "buy Paneer Tikka 2". The system generates a Razorpay payment link and sends it back instantly — no staff involvement.' },
@@ -841,7 +871,7 @@ function WhatsAppSection() {
           </Reveal>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 48 : 80, alignItems: "center" }}>
           {/* Phone visual */}
           <Reveal>
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -875,15 +905,26 @@ function WhatsAppSection() {
    STAT BAR
 ───────────────────────────────────────────── */
 function StatBar({ dark = false, stats }: { dark?: boolean; stats: { num: string; label: string }[] }) {
+  const isMobile = useIsMobile();
   const bg = dark ? C.black : C.offwhite;
   const textColor = dark ? "#f5f5f7" : C.dark;
   const subColor = dark ? "rgba(245,245,247,0.5)" : C.mid;
   const borderColor = dark ? C.sepDark : C.sep;
   return (
     <section style={{ background: bg, borderTop: `1px solid ${borderColor}`, borderBottom: `1px solid ${borderColor}`, fontFamily: fontStack }}>
-      <div style={{ maxWidth: 1068, margin: "0 auto", padding: "48px 22px", display: "grid", gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 0 }}>
+      <div style={{
+        maxWidth: 1068, margin: "0 auto", padding: "48px 22px",
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : `repeat(${stats.length}, 1fr)`,
+        gap: isMobile ? 28 : 0,
+      }}>
         {stats.map((s, i) => (
-          <div key={i} style={{ textAlign: "center", padding: "0 20px", borderRight: i < stats.length - 1 ? `1px solid ${borderColor}` : "none" }}>
+          <div key={i} style={{
+            textAlign: "center", padding: isMobile ? "0" : "0 20px",
+            borderRight: (!isMobile && i < stats.length - 1) ? `1px solid ${borderColor}` : "none",
+            borderBottom: (isMobile && i < stats.length - 1) ? `1px solid ${borderColor}` : "none",
+            paddingBottom: (isMobile && i < stats.length - 1) ? 28 : undefined,
+          }}>
             <Reveal delay={i * 60}>
               <p style={{ fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 700, letterSpacing: F.ls, color: textColor, margin: "0 0 6px", lineHeight: 1 }}>{s.num}</p>
               <p style={{ fontSize: 14, color: subColor, margin: 0 }}>{s.label}</p>
@@ -899,6 +940,7 @@ function StatBar({ dark = false, stats }: { dark?: boolean; stats: { num: string
    COMPARE CARDS  ("Keep Exploring" analog)
 ───────────────────────────────────────────── */
 function CompareCards() {
+  // isMobile used below (after cards array)
   const cards = [
     {
       badge: "Restaurant Suite",
@@ -933,8 +975,9 @@ function CompareCards() {
       ctaLink: "/login",
     },
   ];
+  const isMobile = useIsMobile();
   return (
-    <section id="compare" style={{ background: C.offwhite, padding: "100px 22px", fontFamily: fontStack }}>
+    <section id="compare" style={{ background: C.offwhite, padding: isMobile ? "60px 16px" : "100px 22px", fontFamily: fontStack }}>
       <div style={{ maxWidth: 1068, margin: "0 auto" }}>
         <Reveal>
           <p style={{ fontSize: F.callout, fontWeight: 600, color: C.mid, textAlign: "center", marginBottom: 8 }}>Find your fit</p>
@@ -944,12 +987,12 @@ function CompareCards() {
             Which is right for you?
           </h2>
         </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, marginBottom: 24 }}>
           {cards.map((card, i) => (
             <Reveal key={i} delay={i * 80}>
-              <div style={{ background: C.white, borderRadius: 20, padding: "40px", display: "flex", flexDirection: "column", gap: 0 }}>
+              <div style={{ background: C.white, borderRadius: 20, padding: isMobile ? "24px" : "40px", display: "flex", flexDirection: "column", gap: 0 }}>
                 {/* Visual */}
-                <div style={{ background: i === 0 ? "#fff7f0" : "#f0f4ff", borderRadius: 12, padding: 24, marginBottom: 32 }}>
+                <div style={{ background: i === 0 ? "#fff7f0" : "#f0f4ff", borderRadius: 12, padding: isMobile ? 16 : 24, marginBottom: 24 }}>
                   <ScreenPlaceholder label={`${card.badge} — screenshot`} dark={false} aspect="4/3" />
                 </div>
                 {/* Label */}
