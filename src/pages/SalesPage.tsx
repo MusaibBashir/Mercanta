@@ -163,7 +163,7 @@ export function SalesPage() {
 
     useEffect(() => {
         if (!orderConfirmModal) return;
-        const timer = setTimeout(() => setOrderConfirmModal(null), 2500);
+        const timer = setTimeout(() => setOrderConfirmModal(null), 25000);
         return () => clearTimeout(timer);
     }, [orderConfirmModal]);
 
