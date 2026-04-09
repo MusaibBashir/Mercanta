@@ -375,8 +375,8 @@ export function KitchenDisplaySystem() {
                         {isWA && <WhatsAppBadge />}
                         <span className="truncate">{isWA ? "WhatsApp Order" : (token.customer_name || "Order")}</span>
                       </div>
-                      {isWA && token.customer_phone && (
-                        <p className="text-[11px] text-green-400 mt-0.5">📱 +91 {token.customer_phone}</p>
+                      {isWA && token.customer_phone && token.customer_phone !== 'null' && (
+                        <p className="text-[11px] text-green-400 mt-0.5">📱 {token.customer_phone.replace(/^\+?91/, '')}</p>
                       )}
                     </div>
 
