@@ -200,7 +200,7 @@ function Hero() {
       <Reveal delay={240} from={20} className="relative">
         <div style={{ marginTop: 56, overflow: "hidden", margin: "0 auto", maxWidth: 1200 }}>
           <img 
-            src="public/images/hero_dashboard_screenshot.jpeg" 
+            src="images/hero_dashboard_screenshot.jpeg" 
             alt="Mercanta dashboard" 
             style={{ width: "100%", height: "auto", borderRadius: 12 }}
           />
@@ -373,7 +373,7 @@ function TwoProducts() {
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div style={{ background: "#fff7f0", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
                 <img 
-                  src="public/images/restaurant_dashboard_screenshot.jpeg" 
+                  src="images/restaurant_dashboard_screenshot.jpeg" 
                   alt="Restaurant dashboard" 
                   style={{ width: "100%", height: "auto", borderRadius: 12 }}
                 />
@@ -398,7 +398,7 @@ function TwoProducts() {
             <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div style={{ background: "#f0f4ff", padding: isMobile ? "32px 24px 24px" : "48px 40px 32px", flex: 1 }}>
                 <img 
-                  src="public/images/Franchise_dashboard_screenshot.jpeg" 
+                  src="images/Franchise_dashboard_screenshot.jpeg" 
                   alt="Mercanta dashboard" 
                   style={{ width: "100%", height: "auto", borderRadius: 12 }}
                 />
