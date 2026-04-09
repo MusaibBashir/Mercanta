@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Scan, Keyboard, Plus, Trash2, IndianRupee, Search, CreditCard, Banknote, Smartphone, RefreshCw, PauseCircle, PlayCircle, Printer, Camera, Star } from "lucide-react";
+import { Scan, Keyboard, Plus, Trash2, IndianRupee, Search, CreditCard, Banknote, Smartphone, RefreshCw, PauseCircle, PlayCircle, Printer, Camera, Star, X, CheckCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -152,6 +152,20 @@ export function SalesPage() {
 
     // Camera Scanner State
     const [isScanning, setIsScanning] = useState(false);
+
+    // Order confirmation modal (mobile restaurant)
+    const [orderConfirmModal, setOrderConfirmModal] = useState<{
+        tokenNumber: number;
+        customerName: string;
+        items: Array<{ name: string; quantity: number; price: number }>;
+        total: number;
+    } | null>(null);
+
+    useEffect(() => {
+        if (!orderConfirmModal) return;
+        const timer = setTimeout(() => setOrderConfirmModal(null), 2500);
+        return () => clearTimeout(timer);
+    }, [orderConfirmModal]);
 
     useEffect(() => {
         // Check if there's a held sale on mount
@@ -330,22 +344,54 @@ export function SalesPage() {
         if (activeBusinessAccount?.business_type === "restaurant") {
             // For restaurants, itemIdentifier is the menu item name
             const menuItem = menuItems.find((item: MenuItem) => item.item_name === itemIdentifier);
-            if (menuItem) {
-                setSelectedSku(menuItem.id); // Use item ID as SKU equivalent
-                setItemName(menuItem.item_name);
-                setPrice(menuItem.price);
-                setSearchQuery("");
+            if (!menuItem) return;
+            const existing = items.find(i => i.sku === menuItem.id);
+            if (existing) {
+                setItems(items.map(i => i.sku === menuItem.id ? { ...i, quantity: i.quantity + 1 } : i));
+            } else {
+                setItems([...items, {
+                    id: Date.now().toString(),
+                    sku: menuItem.id,
+                    name: menuItem.item_name,
+                    quantity: 1,
+                    price: menuItem.price,
+                    discount: 0,
+                    discountType: 'flat' as const,
+                    discountValue: 0
+                }]);
             }
+            toast.success(`Added ${menuItem.item_name}`);
         } else {
-            // For franchises, use SKU lookup
-            setSelectedSku(itemIdentifier);
-            const item = getInventoryBySku(itemIdentifier);
-            if (item) {
-                setItemName(item.itemName);
-                setPrice(item.price);
-                setSearchQuery("");
+            // For franchises, itemIdentifier is the SKU
+            const inventoryItem = getInventoryBySku(itemIdentifier);
+            if (!inventoryItem) return;
+            if (inventoryItem.quantity < 1) {
+                toast.error("Out of stock");
+                return;
             }
+            const existing = items.find(i => i.sku === inventoryItem.sku);
+            if (existing) {
+                if (inventoryItem.quantity < existing.quantity + 1) {
+                    toast.error(`Only ${inventoryItem.quantity} units available in stock`);
+                    return;
+                }
+                setItems(items.map(i => i.sku === inventoryItem.sku ? { ...i, quantity: i.quantity + 1 } : i));
+            } else {
+                setItems([...items, {
+                    id: Date.now().toString(),
+                    sku: inventoryItem.sku,
+                    name: inventoryItem.itemName,
+                    quantity: 1,
+                    price: inventoryItem.price,
+                    barcode: inventoryItem.barcode,
+                    discount: 0,
+                    discountType: 'flat' as const,
+                    discountValue: 0
+                }]);
+            }
+            toast.success(`Added ${inventoryItem.itemName}`);
         }
+        setSearchQuery("");
         setIsDropdownOpen(false);
     };
 
@@ -623,6 +669,12 @@ export function SalesPage() {
                                 );
                             }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
+                            setOrderConfirmModal({
+                                tokenNumber: tokenResult.data.token_number,
+                                customerName: effectiveCustomerName,
+                                items: items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+                                total: grandTotal,
+                            });
                         } else if (!tokenResult.success) {
                             toast.error(`Token creation failed: ${tokenResult.error}`);
                         }
@@ -660,6 +712,12 @@ export function SalesPage() {
                                 );
                             }
                             toast.success(`Order #${tokenResult.data.token_number} created!`);
+                            setOrderConfirmModal({
+                                tokenNumber: tokenResult.data.token_number,
+                                customerName: effectiveCustomerName,
+                                items: items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+                                total: grandTotal,
+                            });
                         } else if (!tokenResult.success) {
                             toast.error(`Token creation failed: ${tokenResult.error}`);
                         }
@@ -983,8 +1041,8 @@ export function SalesPage() {
                                                 <button
                                                     key={itemId}
                                                     type="button"
-                                                    onClick={() => handleSelectItem(displayName)}
-                                                    className={`w-full text-left px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors ${selectedSku === itemId ? "bg-purple-50" : ""}`}
+                                                    onClick={() => handleSelectItem(isRestaurant ? displayName : item.sku)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors"
                                                 >
                                                     <div className="flex justify-between items-center">
                                                         <div>
@@ -1012,47 +1070,6 @@ export function SalesPage() {
                             )}
                         </div>
 
-                        {/* Selected item: name + price + qty stepper */}
-                        {selectedSku && (
-                            <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold text-gray-900">{itemName}</p>
-                                        <p className="text-sm text-purple-700 font-medium">₹{price.toFixed(2)} each</p>
-                                    </div>
-                                    {activeBusinessAccount?.business_type !== "restaurant" && (
-                                        <span className="text-xs text-gray-500 bg-white rounded-lg px-2 py-1 border border-gray-200">
-                                            {getInventoryBySku(selectedSku)?.quantity ?? 0} in stock
-                                        </span>
-                                    )}
-                                </div>
-                                {/* Quantity stepper */}
-                                <div className="flex items-center gap-3">
-                                    <span className="text-sm text-gray-600 font-medium">Qty:</span>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                            className="w-9 h-9 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
-                                        >−</button>
-                                        <span className="w-10 text-center font-semibold text-gray-900 text-base">{quantity}</span>
-                                        <button
-                                            onClick={() => setQuantity(q => q + 1)}
-                                            className="w-9 h-9 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
-                                        >+</button>
-                                    </div>
-                                    <span className="ml-auto text-sm font-semibold text-gray-700">= ₹{(price * quantity).toFixed(2)}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Add to Cart button */}
-                        <button
-                            onClick={handleAddItem}
-                            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base flex items-center justify-center gap-2 transition-colors"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Add to Cart
-                        </button>
                     </div>
 
                     {/* Cart Items Card */}
@@ -1429,6 +1446,59 @@ export function SalesPage() {
                     </div>
                 </div>
             </div>
+            {/* Order confirmation modal — mobile only, restaurant only */}
+            {orderConfirmModal && activeBusinessAccount?.business_type === "restaurant" && (
+                <div className="lg:hidden fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/40">
+                    <style>{`@keyframes orderBarShrink { from { width: 100% } to { width: 0% } }`}</style>
+                    <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-emerald-500 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="w-5 h-5 text-white" />
+                                <span className="text-white font-bold text-base">Order Confirmed!</span>
+                            </div>
+                            <button
+                                onClick={() => setOrderConfirmModal(null)}
+                                className="text-white/70 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Token number */}
+                        <div className="text-center py-4 border-b border-gray-100">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Token Number</p>
+                            <p className="text-6xl font-black text-purple-600">#{orderConfirmModal.tokenNumber}</p>
+                            <p className="text-sm text-gray-500 mt-1">{orderConfirmModal.customerName}</p>
+                        </div>
+
+                        {/* Items */}
+                        <div className="px-4 py-3 space-y-1.5 max-h-36 overflow-y-auto">
+                            {orderConfirmModal.items.map((item, i) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                    <span className="text-gray-700">
+                                        {item.name}
+                                        <span className="text-gray-400 ml-1">×{item.quantity}</span>
+                                    </span>
+                                    <span className="font-medium text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Total */}
+                        <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                            <span className="font-semibold text-gray-600">Total</span>
+                            <span className="font-bold text-gray-900 text-lg">₹{orderConfirmModal.total.toFixed(2)}</span>
+                        </div>
+
+                        {/* Auto-dismiss progress bar */}
+                        <div
+                            className="h-1 bg-emerald-500"
+                            style={{ animation: 'orderBarShrink 2.5s linear forwards' }}
+                        />
+                    </div>
+                </div>
+            )}
         </PageContainer>
     );
 }
