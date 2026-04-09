@@ -101,8 +101,8 @@ export function SalesPage() {
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card'>('cash');
 
     // Print toggle state
-    const [printReceiptEnabled, setPrintReceiptEnabled] = useState(true);
-    const [printTokenEnabled, setPrintTokenEnabled] = useState(true);
+    const [printReceiptEnabled, setPrintReceiptEnabled] = useState(false);
+    const [printTokenEnabled, setPrintTokenEnabled] = useState(false);
     const [isSpecialInstructionsOpen, setIsSpecialInstructionsOpen] = useState(false);
     const [isDiscountOpen, setIsDiscountOpen] = useState(false);
 
@@ -163,7 +163,7 @@ export function SalesPage() {
 
     useEffect(() => {
         if (!orderConfirmModal) return;
-        const timer = setTimeout(() => setOrderConfirmModal(null), 2500);
+        const timer = setTimeout(() => setOrderConfirmModal(null), 25000);
         return () => clearTimeout(timer);
     }, [orderConfirmModal]);
 
