@@ -200,7 +200,8 @@ export function KitchenDisplaySystem() {
       .channel(`tokens:${activeBusinessAccount.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_tokens", filter: `business_account_id=eq.${activeBusinessAccount.id}` }, fetchTokens)
       .subscribe();
-    return () => { supabase!.removeChannel(channel); };
+    const poll = setInterval(fetchTokens, 15_000);
+    return () => { supabase!.removeChannel(channel); clearInterval(poll); };
   }, [activeBusinessAccount?.id]);
 
   const updateTokenStatus = async (tokenId: string, newStatus: string) => {
