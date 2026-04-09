@@ -57,11 +57,11 @@ const STATUS_META: Record<
 > = {
   ordered: {
     label: "Ordered",
-    cardBg: "bg-[#0f1f38]",
+    cardBg: "bg-white",
     cardBorder: "border-l-4 border-blue-500",
-    badgeBg: "bg-blue-500/20",
-    badgeText: "text-blue-300",
-    glowColor: "shadow-blue-900/50",
+    badgeBg: "bg-blue-50",
+    badgeText: "text-blue-600",
+    glowColor: "shadow-blue-100",
     icon: <Bell className="w-4 h-4" />,
     actionBg: "bg-blue-600",
     actionHover: "hover:bg-blue-500",
@@ -70,11 +70,11 @@ const STATUS_META: Record<
   },
   confirmed: {
     label: "Confirmed",
-    cardBg: "bg-[#0f1f38]",
+    cardBg: "bg-white",
     cardBorder: "border-l-4 border-indigo-500",
-    badgeBg: "bg-indigo-500/20",
-    badgeText: "text-indigo-300",
-    glowColor: "shadow-indigo-900/50",
+    badgeBg: "bg-indigo-50",
+    badgeText: "text-indigo-600",
+    glowColor: "shadow-indigo-100",
     icon: <CheckCircle2 className="w-4 h-4" />,
     actionBg: "bg-indigo-600",
     actionHover: "hover:bg-indigo-500",
@@ -83,11 +83,11 @@ const STATUS_META: Record<
   },
   preparing: {
     label: "Preparing",
-    cardBg: "bg-[#1f1205]",
+    cardBg: "bg-orange-50",
     cardBorder: "border-l-4 border-orange-400",
-    badgeBg: "bg-orange-500/20",
-    badgeText: "text-orange-300",
-    glowColor: "shadow-orange-900/50",
+    badgeBg: "bg-orange-100",
+    badgeText: "text-orange-700",
+    glowColor: "shadow-orange-100",
     icon: <Flame className="w-4 h-4" />,
     actionBg: "bg-amber-500",
     actionHover: "hover:bg-amber-400",
@@ -96,11 +96,11 @@ const STATUS_META: Record<
   },
   prepared: {
     label: "Prepared",
-    cardBg: "bg-[#1c1700]",
+    cardBg: "bg-yellow-50",
     cardBorder: "border-l-4 border-yellow-400",
-    badgeBg: "bg-yellow-500/20",
-    badgeText: "text-yellow-300",
-    glowColor: "shadow-yellow-900/50",
+    badgeBg: "bg-yellow-100",
+    badgeText: "text-yellow-700",
+    glowColor: "shadow-yellow-100",
     icon: <ChefHat className="w-4 h-4" />,
     actionBg: "bg-emerald-600",
     actionHover: "hover:bg-emerald-500",
@@ -109,11 +109,11 @@ const STATUS_META: Record<
   },
   ready: {
     label: "Ready",
-    cardBg: "bg-[#041a0f]",
-    cardBorder: "border-l-4 border-emerald-400",
-    badgeBg: "bg-emerald-500/20",
-    badgeText: "text-emerald-300",
-    glowColor: "shadow-emerald-900/50",
+    cardBg: "bg-emerald-50",
+    cardBorder: "border-l-4 border-emerald-500",
+    badgeBg: "bg-emerald-100",
+    badgeText: "text-emerald-700",
+    glowColor: "shadow-emerald-100",
     icon: <CheckCircle2 className="w-4 h-4" />,
     actionBg: "bg-slate-600",
     actionHover: "hover:bg-slate-500",
@@ -122,37 +122,37 @@ const STATUS_META: Record<
   },
   served: {
     label: "Served",
-    cardBg: "bg-[#111219]",
-    cardBorder: "border-l-4 border-slate-600",
-    badgeBg: "bg-slate-700/50",
-    badgeText: "text-slate-400",
+    cardBg: "bg-gray-50",
+    cardBorder: "border-l-4 border-gray-300",
+    badgeBg: "bg-gray-100",
+    badgeText: "text-gray-500",
     glowColor: "shadow-none",
     icon: <UtensilsCrossed className="w-4 h-4" />,
-    actionBg: "bg-slate-700",
-    actionHover: "hover:bg-slate-600",
+    actionBg: "bg-gray-400",
+    actionHover: "hover:bg-gray-300",
     actionLabel: "",
     nextStatus: null,
   },
   cancelled: {
     label: "Cancelled",
-    cardBg: "bg-[#200a0a]",
-    cardBorder: "border-l-4 border-red-700",
-    badgeBg: "bg-red-900/40",
-    badgeText: "text-red-300",
+    cardBg: "bg-red-50",
+    cardBorder: "border-l-4 border-red-400",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-600",
     glowColor: "shadow-none",
     icon: <AlertCircle className="w-4 h-4" />,
-    actionBg: "bg-red-800",
-    actionHover: "hover:bg-red-700",
+    actionBg: "bg-red-500",
+    actionHover: "hover:bg-red-400",
     actionLabel: "",
     nextStatus: null,
   },
 };
 
 const SUMMARY_CARDS = [
-  { key: "ordered",  label: "New Orders",  gradFrom: "#1e3a5f", gradTo: "#1a2f50", accent: "#60a5fa", dot: "bg-blue-400" },
-  { key: "preparing",label: "Preparing",   gradFrom: "#3b1c00", gradTo: "#2d1500", accent: "#fb923c", dot: "bg-orange-400" },
-  { key: "prepared", label: "Prepared",    gradFrom: "#2e2400", gradTo: "#221b00", accent: "#facc15", dot: "bg-yellow-400" },
-  { key: "ready",    label: "Ready",       gradFrom: "#053a20", gradTo: "#042e18", accent: "#34d399", dot: "bg-emerald-400" },
+  { key: "ordered",   label: "New Orders", accent: "#2563eb", dot: "bg-blue-500",    bg: "bg-blue-50"   },
+  { key: "preparing", label: "Preparing",  accent: "#ea580c", dot: "bg-orange-500",  bg: "bg-orange-50" },
+  { key: "prepared",  label: "Prepared",   accent: "#ca8a04", dot: "bg-yellow-500",  bg: "bg-yellow-50" },
+  { key: "ready",     label: "Ready",      accent: "#059669", dot: "bg-emerald-500", bg: "bg-emerald-50"},
 ];
 
 function formatTime(dateString: string) {
@@ -206,6 +206,7 @@ export function KitchenDisplaySystem() {
   const updateTokenStatus = async (tokenId: string, newStatus: string) => {
     setUpdatingTokenId(tokenId);
     try {
+      const token = tokens.find(t => t.id === tokenId);
       const { error } = await supabase!.rpc("update_token_status", {
         p_token_id: tokenId,
         p_new_status: newStatus,
@@ -214,6 +215,21 @@ export function KitchenDisplaySystem() {
       if (error) throw error;
       toast.success(`Marked as ${newStatus}`);
       playBeep();
+
+      // Send WhatsApp notification when a WA order is marked ready
+      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
+      if (newStatus === "ready" && token && token.customer_name === "WhatsApp Customer" && token.customer_phone && token.customer_phone !== "null" && webhookUrl) {
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: token.customer_phone,
+            token_number: token.token_number,
+            items: token.order_items,
+          }),
+        }).catch(() => {}); // fire-and-forget, don't block the UI
+      }
+
       await fetchTokens();
     } catch (err) {
       toast.error(`Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -237,9 +253,9 @@ export function KitchenDisplaySystem() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0d14]">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
           <p className="text-sm font-medium tracking-wider uppercase">Loading Kitchen Display…</p>
         </div>
       </div>
@@ -258,33 +274,28 @@ export function KitchenDisplaySystem() {
   ).length;
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "linear-gradient(175deg, #080b12 0%, #0c1018 60%, #070a0f 100%)" }}>
+    <div className="min-h-screen bg-gray-100 text-gray-900">
 
-      {/* ── HEADER ── dramatically attention-seeking ── */}
-      <header className="sticky top-0 z-20" style={{ background: "rgba(6,8,14,0.95)", borderBottom: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(16px)" }}>
-        {/* Glowing accent strip */}
-        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, #f97316 0%, #ef4444 30%, #a855f7 60%, #3b82f6 100%)" }} />
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        {/* Accent strip */}
+        <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #f97316 0%, #ef4444 30%, #a855f7 60%, #3b82f6 100%)" }} />
 
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 gap-4">
+        <div className="flex items-center justify-between px-5 pt-3 pb-3 gap-4">
           {/* Left: brand + title */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative flex-shrink-0">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-xl" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)" }}>
-                <ChefHat className="w-6 h-6 text-white" />
-              </div>
-              {/* Glow ring */}
-              <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: "0 0 18px 4px rgba(249,115,22,0.35)" }} />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-md" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)" }}>
+              <ChefHat className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight leading-none text-white">Kitchen Display</h1>
-              <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Live order queue</p>
+              <h1 className="text-lg font-black tracking-tight leading-none text-gray-900">Kitchen Display</h1>
+              <p className="text-[11px] text-gray-400 mt-0.5 font-medium">Live order queue</p>
             </div>
           </div>
 
-          {/* Centre: urgent badge — shown when orders are overdue */}
+          {/* Centre: urgent badge */}
           {urgentCount > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-sm animate-pulse"
-              style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171" }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-sm animate-pulse bg-red-50 border border-red-200 text-red-600">
               <AlertCircle className="w-4 h-4" />
               {urgentCount} OVERDUE
             </div>
@@ -292,24 +303,24 @@ export function KitchenDisplaySystem() {
 
           {/* Right: live pill + total active */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               LIVE
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-white/60 bg-white/5 border border-white/8 px-3 py-1.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full">
               {tokens.length} active
             </span>
           </div>
         </div>
 
-        {/* Summary stat row — compact, inline below title */}
-        <div className="grid grid-cols-4 divide-x divide-white/5 border-t border-white/5">
+        {/* Summary stat row */}
+        <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
           {SUMMARY_CARDS.map(s => {
             const count = grouped[s.key as keyof typeof grouped]?.length ?? 0;
             return (
-              <div key={s.key} className="py-2.5 px-4 text-center">
-                <span className="text-2xl font-black" style={{ color: count > 0 ? s.accent : "rgba(255,255,255,0.15)" }}>{count}</span>
-                <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: count > 0 ? s.accent : "rgba(255,255,255,0.2)" }}>{s.label}</p>
+              <div key={s.key} className={`py-2.5 px-4 text-center ${count > 0 ? s.bg : ''}`}>
+                <span className="text-2xl font-black" style={{ color: count > 0 ? s.accent : "#d1d5db" }}>{count}</span>
+                <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: count > 0 ? s.accent : "#9ca3af" }}>{s.label}</p>
               </div>
             );
           })}
@@ -320,11 +331,11 @@ export function KitchenDisplaySystem() {
 
         {/* ── Token Grid ── */}
         {tokens.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-28 text-slate-600 gap-4">
+          <div className="flex flex-col items-center justify-center py-28 text-gray-400 gap-4">
             <UtensilsCrossed className="w-16 h-16 opacity-30" />
             <div className="text-center">
-              <p className="text-xl font-semibold text-slate-500">Kitchen is all caught up!</p>
-              <p className="text-sm mt-1 text-slate-600">No active orders right now.</p>
+              <p className="text-xl font-semibold text-gray-500">Kitchen is all caught up!</p>
+              <p className="text-sm mt-1 text-gray-400">No active orders right now.</p>
             </div>
           </div>
         ) : (
@@ -351,13 +362,10 @@ export function KitchenDisplaySystem() {
                   <div className="p-4">
                     {/* Top row: token # + wait time */}
                     <div className="flex items-start justify-between mb-3">
-                      <div
-                        className="text-5xl font-black leading-none"
-                        style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
-                      >
+                      <div className="text-5xl font-black leading-none text-gray-800">
                         #{token.token_number}
                       </div>
-                      <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${isUrgent ? "bg-red-500/20 text-red-300" : "bg-white/8 text-white/50"}`}>
+                      <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${isUrgent ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}>
                         <Clock className="w-3 h-3" />
                         {waitMin}m
                       </div>
@@ -371,35 +379,35 @@ export function KitchenDisplaySystem() {
 
                     {/* Customer */}
                     <div className="mb-3">
-                      <div className="flex items-center gap-1.5 font-semibold text-sm text-white/90">
+                      <div className="flex items-center gap-1.5 font-semibold text-sm text-gray-800">
                         {isWA && <WhatsAppBadge />}
                         <span className="truncate">{isWA ? "WhatsApp Order" : (token.customer_name || "Order")}</span>
                       </div>
                       {isWA && token.customer_phone && token.customer_phone !== 'null' && (
-                        <p className="text-[11px] text-green-400 mt-0.5">📱 {token.customer_phone.replace(/^\+?91/, '')}</p>
+                        <p className="text-[11px] text-green-600 mt-0.5">📱 {token.customer_phone.replace(/^\+?91/, '')}</p>
                       )}
                     </div>
 
                     {/* Items */}
-                    <div className="text-xs leading-relaxed text-white/75 line-clamp-4 mb-2">
+                    <div className="text-xs leading-relaxed text-gray-600 line-clamp-4 mb-2">
                       {token.order_items}
                     </div>
 
                     {/* Notes */}
                     {token.notes && token.notes !== "WhatsApp order" && (
-                      <div className="text-[11px] italic text-amber-300/70 bg-amber-500/8 border border-amber-500/15 rounded-lg px-2.5 py-1.5 mb-2">
+                      <div className="text-[11px] italic text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
                         📝 {token.notes}
                       </div>
                     )}
 
                     {/* Time ordered */}
-                    <p className="text-[10px] text-white/30 mt-2">{formatTime(token.created_at)}</p>
+                    <p className="text-[10px] text-gray-400 mt-2">{formatTime(token.created_at)}</p>
                   </div>
 
-                  {/* ── Action strip — always visible, no tap needed ── */}
+                  {/* ── Action strip ── */}
                   {!["served","cancelled"].includes(token.status) && (
                     <div
-                      className="border-t border-white/8 px-3 pb-3 pt-2.5 space-y-1.5"
+                      className="border-t border-gray-100 px-3 pb-3 pt-2.5 space-y-1.5"
                       onClick={e => e.stopPropagation()}
                     >
                       {/* PRIMARY: advance one step */}
@@ -407,7 +415,7 @@ export function KitchenDisplaySystem() {
                         <button
                           onClick={() => updateTokenStatus(token.id, meta.nextStatus!)}
                           disabled={isUpdating}
-                          className={`w-full flex items-center justify-center gap-2 text-xs font-black py-2.5 rounded-xl shadow-md transition-all active:scale-95 ${meta.actionBg} ${meta.actionHover} text-white disabled:opacity-50`}
+                          className={`w-full flex items-center justify-center gap-2 text-xs font-black py-2.5 rounded-xl shadow-sm transition-all active:scale-95 ${meta.actionBg} ${meta.actionHover} text-white disabled:opacity-50`}
                         >
                           {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : meta.icon}
                           {meta.actionLabel}
@@ -417,48 +425,44 @@ export function KitchenDisplaySystem() {
                       {/* SKIP ROW: quick jump buttons */}
                       {(!["ready","served","cancelled"].includes(token.status)) && (
                         <div className="flex gap-1.5">
-                          {/* Skip to Preparing — only if not already there or past */}
                           {["ordered","confirmed"].includes(token.status) && (
                             <button
                               onClick={() => updateTokenStatus(token.id, "preparing")}
                               disabled={isUpdating}
                               title="Skip to Preparing"
-                              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/30 text-orange-300 border border-orange-500/20 transition-all active:scale-95 disabled:opacity-40"
+                              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-600 border border-orange-200 transition-all active:scale-95 disabled:opacity-40"
                             >
                               <Flame className="w-3 h-3" /> Prep
                             </button>
                           )}
 
-                          {/* Skip to Ready */}
                           {meta.nextStatus !== "ready" && (
                             <button
                               onClick={() => updateTokenStatus(token.id, "ready")}
                               disabled={isUpdating}
                               title="Skip to Ready"
-                              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-40"
+                              className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border border-emerald-200 transition-all active:scale-95 disabled:opacity-40"
                             >
                               <CheckCircle2 className="w-3 h-3" /> Ready
                             </button>
                           )}
 
-                          {/* Mark Served */}
                           <button
                             onClick={() => updateTokenStatus(token.id, "served")}
                             disabled={isUpdating}
                             title="Mark Served"
-                            className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-slate-600/20 hover:bg-slate-600/40 text-slate-400 border border-slate-600/20 transition-all active:scale-95 disabled:opacity-40"
+                            className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-all active:scale-95 disabled:opacity-40"
                           >
                             <UtensilsCrossed className="w-3 h-3" /> Served
                           </button>
                         </div>
                       )}
 
-                      {/* If already at ready: just a Served button */}
                       {token.status === "ready" && (
                         <button
                           onClick={() => updateTokenStatus(token.id, "served")}
                           disabled={isUpdating}
-                          className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2 rounded-xl bg-slate-600/30 hover:bg-slate-600/50 text-slate-300 border border-slate-600/20 transition-all active:scale-95 disabled:opacity-50"
+                          className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200 transition-all active:scale-95 disabled:opacity-50"
                         >
                           <UtensilsCrossed className="w-3.5 h-3.5" /> Mark Served
                         </button>
