@@ -186,7 +186,7 @@ function Hero() {
         </Reveal>
         <Reveal delay={120}>
           <p style={{ fontSize: F.title2, fontWeight: 400, color: C.mid, letterSpacing: F.lsTitle, lineHeight: 1.4, maxWidth: 600, margin: "0 auto 32px" }}>
-            Restaurant operations and franchise management,<br />fully connected.
+            One Platform, Zero Compromises<br />Fully connected, Fully Modular.
           </p>
         </Reveal>
         <Reveal delay={180}>
