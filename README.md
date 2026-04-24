@@ -1,4 +1,4 @@
 
-  # Information System Project
+  # Information System Project - Mercanta
 
-- Current Deployment- https://isp10.netlify.app/
+- Current Deployment- https://mercanta.in/
